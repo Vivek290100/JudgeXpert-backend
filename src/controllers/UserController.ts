@@ -1,5 +1,12 @@
 import { Request, Response } from "express";
 import UserService from "../services/UserService";
+import {
+  sendSuccessResponse,
+  sendErrorResponse,
+  filterUserResponse,
+  setAuthCookie,
+  clearAuthCookie,
+} from "../utils/responseUtils";
 
 interface AuthRequest extends Request {
   user?: { userId: string };
@@ -8,157 +15,128 @@ interface AuthRequest extends Request {
 class UserController {
   constructor(private _userService: UserService) {}
 
-  async signUpUser(req: Request, res: Response): Promise<void> {
-    // console.log("signuppppppppp",req.body);
-    
+  private async handleAuthOperation(
+    req: Request | AuthRequest,
+    res: Response,
+    operation: (data: any) => Promise<{ user: any; accessToken: string; refreshToken: string }>
+  ) {
     try {
-      const { email, password, userName, fullName } = req.body;
-      const result = await this._userService.initiateSignUp({
-        email,
-        password,
-        userName,
-        fullName,
-      });
+      const result = await operation(req.body);
+      const { user, accessToken, refreshToken } = result;
 
-      res.status(200).json({
-        success: true,
-        message: "OTP sent to email",
-        email: result.email,
+      setAuthCookie(res, accessToken, refreshToken);
+
+      const filteredUser = filterUserResponse(user);
+
+      sendSuccessResponse(res, {
+        message: "Operation successful",
+        data: { user: filteredUser },
       });
     } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message,
-      });
+      sendErrorResponse(res, error);
     }
+  }
+
+  private async handleOtpOperation(
+    req: Request,
+    res: Response,
+    operation: (data: any) => Promise<any>
+  ) {
+    try {
+      const result = await operation(req.body);
+      
+      sendSuccessResponse(res, {
+        message: result.message || "Operation successful",
+        data: result.email ? { email: result.email } : {},
+      });
+    } catch (error: any) {
+      sendErrorResponse(res, error);
+    }
+  }
+
+  async signUpUser(req: Request, res: Response): Promise<void> {
+    await this.handleOtpOperation(req, res, (data) =>
+      this._userService.initiateSignUp({
+        email: data.email,
+        password: data.password,
+        userName: data.userName,
+        fullName: data.fullName,
+      })
+    );
   }
 
   async verifyOtp(req: Request, res: Response): Promise<void> {
-    try {
-      const { email, otp } = req.body;
-      // console.log("its verify otp controller", otp, email);
-      const { user, accessToken, refreshToken } = await this._userService.verifyOtpAndCreateUser(email, otp);
-
-      res.cookie("accessToken", accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 15 * 60 * 1000,
-      });
-
-      const filteredUser = {
-        id: user._id,
-        userName: user.userName,
-        fullName: user.fullName,
-        email: user.email,
-        profileImage:
-          user.profileImage ||
-          "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?fit=crop&w=32&h=32",
-        role: user.role,
-        joinedDate: user.joinedDate,
-        problemsSolved: user.problemsSolved ?? 0,
-        rank: user.rank ?? 0,
-      };
-
-      res.status(200).json({
-        success: true,
-        message: "User verified successfully",
-        user: filteredUser,
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message,
-      });
-    }
+    await this.handleAuthOperation(req, res, (data) =>
+      this._userService.verifyOtpAndCreateUser(data.email, data.otp)
+    );
   }
 
   async resendOtp(req: Request, res: Response): Promise<void> {
-    try {
-      const email = req.body.email;
-      await this._userService.resendOtp(email);
-
-      res.status(200).json({
-        success: true,
-        message: "OTP resent successfully",
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message,
-      });
-    }
+    await this.handleOtpOperation(req, res, (data) =>
+      this._userService.resendOtp(data.email)
+    );
   }
-
 
   async loginUser(req: Request, res: Response): Promise<void> {
-    // console.log("its login controller");
+    console.log("it sloginnnnnnnnnnnnnnn");
     
-    try {
-      const { email, password } = req.body;
-      const { user, accessToken, refreshToken } = await this._userService.loginUser(email, password);
-
-      res.cookie("accessToken", accessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 15 * 60 * 1000,
-      });
-
-      const filteredUser = {
-        id: user._id,
-        userName: user.userName,
-        fullName: user.fullName,
-        email: user.email,
-        profileImage:
-          user.profileImage ||
-          "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?fit=crop&w=32&h=32",
-        role: user.role,
-        joinedDate: user.joinedDate,
-        problemsSolved: user.problemsSolved ?? 0,
-        rank: user.rank ?? 0,
-      };
-
-      res.status(200).json({
-        success: true,
-        message: "User logged in successfully",
-        user: filteredUser,
-      });
-    } catch (error: any) {
-      res.status(400).json({
-        success: false,
-        message: error.message,
-      });
-    }
+    await this.handleAuthOperation(req, res, (data) =>
+      this._userService.loginUser(data.email, data.password)
+    );
   }
-
 
   async logout(req: AuthRequest, res: Response): Promise<void> {
     try {
       const userId = req.user?.userId;
-      // console.log("User ID:", userId);
-
       if (!userId) throw new Error("Unauthorized: No user ID found");
 
       await this._userService.logout(userId);
+      clearAuthCookie(res);
 
-      // console.log("Cookies before clear:", req.cookies);
-      res.clearCookie("accessToken", {
-        httpOnly: true,
-        secure: true,
-        sameSite: "strict",
-        path: "/",
+      sendSuccessResponse(res, {
+        message: "Logged out successfully",
       });
-      // console.log("Cookies after clear:", req.cookies);
-
-      res
-        .status(200)
-        .json({ success: true, message: "Logged out successfully" });
     } catch (error: any) {
-      // console.error("Logout error:", error.message);
-      res.status(400).json({ success: false, message: error.message });
+      sendErrorResponse(res, error);
     }
   }
+
+  async forgotPassword(req: Request, res: Response): Promise<void> {
+    console.log("its forgot password controller");
+    await this.handleOtpOperation(req, res, (data) =>
+      this._userService.forgotPassword(data.email)
+    );
+  }
+  
+  async verifyForgotPasswordOtp(req: Request, res: Response): Promise<void> {
+    try {
+      const { email, otp } = req.body;
+      await this._userService.verifyForgotPasswordOtp(email, otp);
+      sendSuccessResponse(res, { 
+        message: "OTP verified successfully",
+        data: { email }
+      });
+    } catch (error: any) {
+      sendErrorResponse(res, error);
+    }
+  }
+
+  async resetPassword(req: Request, res: Response): Promise<void> {
+    try {
+      console.log("tttttt",req.body);
+      
+      const { email, otp, newPassword } = req.body;
+      if (!email  || !newPassword) {
+        throw new Error("All fields are required");
+      }
+  
+      await this._userService.resetPassword(email, otp, newPassword);
+      sendSuccessResponse(res, { message: "Password reset successfully" });
+    } catch (error: any) {
+      sendErrorResponse(res, error);
+    }
+  }
+  
 }
 
 export default UserController;
