@@ -1,7 +1,8 @@
 // C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\utils\emailBrevo.ts
 import axios from "axios";
+import { CONFIG } from "../config/config";
 
-const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const BREVO_API_KEY = CONFIG.BREVO_API_KEY;
 const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
 interface EmailParams {

@@ -3,11 +3,11 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
 import mongoSanitize from "express-mongo-sanitize";
 import connectDB from "./database/connectDb";
 import userRouter from "./routes/UserRoutes";
 import { responseLogger } from "./middlewares/logger";
+import {CONFIG} from "./config/config"
 
 dotenv.config();
 connectDB();
@@ -20,7 +20,7 @@ app.use(mongoSanitize());
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    origin: CONFIG.FRONTEND_URL,
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
