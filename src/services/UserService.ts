@@ -14,13 +14,14 @@ class UserService {
     private refreshTokenRepository: RefreshTokenRepository
   ) {}
 
-  private async generateAndSendOtp(email: string): Promise<string> {
+  private async generateAndSendOtp(email: string, purpose: 'signup' | 'reset' = 'signup'): Promise<string> {
     const otp = randomInt(100000, 999999).toString();
     console.log(otp, email);
-    await redisClient.set(`otp:${email}`, otp, { EX: 300 });
+    const otpKey = `${purpose}:otp:${email}`;
+    await redisClient.set(otpKey, otp, { EX: 300 });
     await sendOtpEmail({
       to: email,
-      subject: "verify your email ",
+      subject: purpose === 'signup' ? "Verify your email" : "Reset your password",
       otp,
       error: "",
     });
@@ -63,17 +64,16 @@ class UserService {
     return { email: data.email };
   }
 
-  async verifyOtpAndCreateUser(
-    email: string,
-    otp: string
-  ): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
-    const storedOtp = await redisClient.get(`otp:${email}`);
+  async verifyOtpAndCreateUser(email: string, otp: string): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
+    const storedOtp = await redisClient.get(`signup:otp:${email}`);
+    
     if (!storedOtp) {
       throw new Error("OTP expired. Please request a new one.");
     }
     if (storedOtp !== otp) {
       throw new Error("Invalid OTP. Please enter the correct OTP.");
     }
+
     const userDataString = await redisClient.get(`tempUser:${email}`);
     if (!userDataString) {
       throw new Error("Sign up session expired. Please try again.");
@@ -81,7 +81,7 @@ class UserService {
 
     // Clean up Redis
     await Promise.all([
-      redisClient.del(`otp:${email}`),
+      redisClient.del(`signup:otp:${email}`),
       redisClient.del(`tempUser:${email}`),
     ]);
 
@@ -169,15 +169,64 @@ class UserService {
   }
 
   async resendOtp(email: string): Promise<void> {
-    console.log("its resend otp service", email);
     const userData = await redisClient.get(`tempUser:${email}`);
-    // console.log("userdata", userData);
-
     if (!userData) {
       throw new Error("Sign up session expired. Please start over.");
     }
-    await this.generateAndSendOtp(email);
+    await this.generateAndSendOtp(email, 'signup');
   }
+
+
+  async forgotPassword(email: string): Promise<{ email: string }> {
+    console.log("its forgot password service");
+    
+    const user = await this.userRepository.findByQuery({ email });
+    if (!user) {
+      throw new Error("User with this email does not exist");
+    }
+    await this.generateAndSendOtp(email, 'reset');
+    return { email };
+  }
+
+  async verifyForgotPasswordOtp(email: string, otp: string): Promise<void> {
+    const storedOtp = await redisClient.get(`reset:otp:${email}`);
+    
+    if (!storedOtp) {
+      throw new Error("OTP expired. Please request a new one.");
+    }
+    if (storedOtp !== otp) {
+      throw new Error("Invalid OTP. Please enter the correct OTP.");
+    }
+    
+    // Mark OTP as verified for reset flow
+    await redisClient.set(`reset:verified:${email}`, 'true', { EX: 300 });
+    await redisClient.del(`reset:otp:${email}`);
+  }
+
+
+  async resetPassword(email: string, otp: string, newPassword: string): Promise<void> {
+    const isVerified = await redisClient.get(`reset:verified:${email}`);
+    const storedOtp = await redisClient.get(`reset:otp:${email}`); // Fallback check
+    
+    if (!isVerified && (!storedOtp || storedOtp !== otp)) {
+      throw new Error("OTP not verified or invalid. Please verify OTP first.");
+    }
+
+    const user = await this.userRepository.findByQuery({ email });
+    if (!user) {
+      throw new Error("User not found.");
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await this.userRepository.update(user._id, { password: hashedPassword });
+
+    // Clean up Redis
+    await Promise.all([
+      redisClient.del(`reset:otp:${email}`),
+      redisClient.del(`reset:verified:${email}`)
+    ]);
+  }
+  
 }
 
 export default UserService;

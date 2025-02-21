@@ -1,6 +1,7 @@
 // C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\middlewares\authMiddleware.ts
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { CONFIG } from "../config/config";
 
 interface AuthRequest extends Request {
   user?: { userId: string };
@@ -13,7 +14,7 @@ const authMiddleware = (req: AuthRequest, res: Response,next: NextFunction): voi
     return;}
 
   try {
-    const decoded = jwt.verify(token,process.env.ACCESS_TOKEN_SECRET as string) as { userId: string };
+    const decoded = jwt.verify(token,CONFIG.ACCESS_TOKEN_SECRET as string) as { userId: string };
     // console.log("decodeddecodeddecoded",decoded);
     
     req.user = { userId: decoded.userId };
