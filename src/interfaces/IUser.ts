@@ -13,6 +13,7 @@ export interface IUser extends Document {
   problemsSolved: number;
   rank: number;
   isBlocked: boolean;
+  isPremium: boolean;
   subscription?: Types.ObjectId;
   solvedProblems: Types.ObjectId[];
   submissions: Types.ObjectId[];

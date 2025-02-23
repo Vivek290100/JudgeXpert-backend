@@ -1,3 +1,4 @@
+// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\dist\app.js
 "use strict";
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -24,14 +25,8 @@ app.use((0, cors_1.default)({
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
 }));
-// ✅ Rate Limiting
-const limiter = (0, express_rate_limit_1.default)({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // 100 requests per IP
-    message: "Too many requests, please try again later.",
-});
-app.use(limiter);
-// ✅ JSON & Cookie Middleware
+
+
 app.use(express_1.default.json());
 app.use((0, cookie_parser_1.default)());
 app.use((req, res, next) => {
@@ -55,8 +50,5 @@ app.post("/submit", [
     res.send("✅ Data received safely!");
     next(); // Call next middleware if needed
 });
-// ✅ Root Route
-app.get("/", (req, res) => {
-    res.send("✅ Server is running securely!");
-});
+
 exports.default = app;

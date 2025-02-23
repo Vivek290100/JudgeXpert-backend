@@ -3,7 +3,7 @@ import { Model, Document, FilterQuery } from "mongoose";
 import {IBaseRepository} from "../interfaces/IBaseRepositories"
 
 class BaseRepository<T extends Document> implements IBaseRepository<T> {
-  private model: Model<T>;
+  protected model: Model<T>;
 
   constructor(model: Model<T>) {
     this.model = model;
@@ -31,6 +31,10 @@ class BaseRepository<T extends Document> implements IBaseRepository<T> {
   async delete(id: string): Promise<T | null> {
     return await this.model.findByIdAndDelete(id);
   }
+  
 }
 
 export default BaseRepository;
+
+
+

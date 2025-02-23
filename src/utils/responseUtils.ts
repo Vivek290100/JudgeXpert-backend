@@ -1,40 +1,26 @@
-// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\utils\responseUtils.ts
-import { Request, Response } from "express";
+import { Response } from "express";
 
-// Interface for standardized response data
+//  for response data
 interface ResponseData {
   success: boolean;
-  message?: string;
+  message: string;
+  status: number;
   data?: any;
-  status?: number;
 }
 
-// Common success response handler
-export const sendSuccessResponse = (
+export const sendResponse = (
   res: Response,
-  data: Partial<ResponseData> = {},
-  status: number = 200
+  options: ResponseData
 ) => {
-  res.status(status).json({
-    success: true,
-    message: data.message || "Operation successful",
-    data: data.data || null,
+  res.status(options.status).json({
+    success: options.success,
+    message: options.message,
+    data: options.data || null,
   });
 };
 
-// Common error response handler
-export const sendErrorResponse = (
-  res: Response,
-  error: any,
-  status: number = 400
-) => {
-  res.status(status).json({
-    success: false,
-    message: error.message || "An error occurred",
-  });
-};
 
-// Helper to filter user data for responses
+
 export const filterUserResponse = (user: any) => ({
   id: user._id,
   userName: user.userName,
@@ -59,7 +45,7 @@ export const setAuthCookie = (
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
-    maxAge: 15 * 60 * 1000, // 15 minutes
+    maxAge: 59 * 60 * 1000,
   });
 
 //   if (refreshToken) {

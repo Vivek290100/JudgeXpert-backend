@@ -1,4 +1,3 @@
-// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\services\UserService.ts
 import { IUser } from "../interfaces/IUser";
 import { randomInt } from "crypto";
 import bcrypt from "bcrypt";
@@ -9,6 +8,8 @@ import UserRepository from "../repositories/UserRepository";
 import RefreshTokenRepository from "../repositories/RefreshTokenRepository";
 
 class UserService {
+  private readonly OTP_EXPIRY_SECONDS = 300;
+
   constructor(
     private userRepository: UserRepository,
     private refreshTokenRepository: RefreshTokenRepository
@@ -16,9 +17,10 @@ class UserService {
 
   private async generateAndSendOtp(email: string, purpose: 'signup' | 'reset' = 'signup'): Promise<string> {
     const otp = randomInt(100000, 999999).toString();
-    console.log(otp, email);
     const otpKey = `${purpose}:otp:${email}`;
-    await redisClient.set(otpKey, otp, { EX: 300 });
+    console.log(otp, email);
+    
+    await redisClient.set(otpKey, otp, { EX: this.OTP_EXPIRY_SECONDS });
     await sendOtpEmail({
       to: email,
       subject: purpose === 'signup' ? "Verify your email" : "Reset your password",
@@ -28,9 +30,7 @@ class UserService {
     return otp;
   }
 
-  async initiateSignUp(data: Partial<IUser>): Promise<{ email: string }> {
-    // console.log("signup serviceeeeeeeeeeeeeeee");
-    
+  async initiateSignUp(data: Partial<IUser>): Promise<{ message: string; email: string }> {
     if (!data.email || !data.password || !data.userName) {
       throw new Error("Required fields are missing");
     }
@@ -58,10 +58,10 @@ class UserService {
 
     userData.password = await bcrypt.hash(data.password, 10);
     await redisClient.set(`tempUser:${data.email}`, JSON.stringify(userData), {
-      EX: 300,
+      EX: this.OTP_EXPIRY_SECONDS,
     });
     await this.generateAndSendOtp(data.email);
-    return { email: data.email };
+    return { message: "Registration OTP sent successfully", email: data.email };
   }
 
   async verifyOtpAndCreateUser(email: string, otp: string): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
@@ -79,67 +79,50 @@ class UserService {
       throw new Error("Sign up session expired. Please try again.");
     }
 
-    // Clean up Redis
+    const userData = JSON.parse(userDataString);
+    const user = await this.userRepository.create(userData);
+
+    // Clean up Redis only after successful creation
     await Promise.all([
       redisClient.del(`signup:otp:${email}`),
       redisClient.del(`tempUser:${email}`),
     ]);
 
-    // Create user
-    const userData = JSON.parse(userDataString);
-    const user = await this.userRepository.create(userData);
-
     const accessToken = JWTService.generateAccessToken(user._id.toString());
     const refreshToken = JWTService.generateRefreshToken(user._id.toString());
 
-    // Store refresh token in the database
     await this.refreshTokenRepository.create({
       userId: user._id,
       token: refreshToken,
     });
+
     return { user, accessToken, refreshToken };
   }
 
-  async refreshAccessToken(
-    refreshToken: string
-  ): Promise<{ accessToken: string }> {
-    try {
-      const decoded = JWTService.verifyToken(refreshToken, "refresh");
-      if (!decoded || typeof decoded !== "object" || !decoded.userId) {
-        throw new Error("Invalid refresh token.");
-      }
-      const userId = decoded.userId;
-
-      // checking refresh token is there or not
-      const storedToken = await this.refreshTokenRepository.findByUserId(
-        userId
-      );
-      if (!storedToken || storedToken.token !== refreshToken) {
-        throw new Error("Refresh token is not valid.");
-      }
-
-      // Generate new access token
-      const newAccessToken = JWTService.generateAccessToken(userId);
-
-      return { accessToken: newAccessToken };
-    } catch (error) {
-      throw new Error("Failed to refresh access token.");
+  async refreshAccessToken(refreshToken: string): Promise<{ accessToken: string }> {
+    const decoded = JWTService.verifyToken(refreshToken, "refresh") as { userId: string } | null;
+    if (!decoded?.userId) {
+      throw new Error("Invalid refresh token.");
     }
+
+    const storedToken = await this.refreshTokenRepository.findByUserId(decoded.userId);
+    if (!storedToken || storedToken.token !== refreshToken) {
+      throw new Error("Refresh token is not valid.");
+    }
+
+    const newAccessToken = JWTService.generateAccessToken(decoded.userId);
+    return { accessToken: newAccessToken };
   }
 
-
-  async loginUser( email: string, password: string ): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
-    // console.log("its login user service");
-    
+  async loginUser(email: string, password: string): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
     const user = await this.userRepository.findByQuery({ email });
-    if(!user){
-      // console.log("nooo userrrr");
-    }
-
     if (!user) {
       throw new Error("User not found");
-      
     }
+
+    if (user.isBlocked) {
+      throw new Error("You are not allowed to sign in. Your account has been blocked.");
+  }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
@@ -149,7 +132,6 @@ class UserService {
     const accessToken = JWTService.generateAccessToken(user._id.toString());
     const refreshToken = JWTService.generateRefreshToken(user._id.toString());
 
-    // Store refresh token in the database
     await this.refreshTokenRepository.create({
       userId: user._id,
       token: refreshToken,
@@ -158,9 +140,7 @@ class UserService {
     return { user, accessToken, refreshToken };
   }
 
-
   async logout(userId: string): Promise<void> {
-    // console.log("It's logout service for user:", userId);
     const storedToken = await this.refreshTokenRepository.findByUserId(userId);
     if (!storedToken) {
       throw new Error("No refresh token found for this user.");
@@ -168,24 +148,22 @@ class UserService {
     await this.refreshTokenRepository.deleteByUserId(userId);
   }
 
-  async resendOtp(email: string): Promise<void> {
+  async resendOtp(email: string): Promise<{ message: string; email: string }> {
     const userData = await redisClient.get(`tempUser:${email}`);
     if (!userData) {
       throw new Error("Sign up session expired. Please start over.");
     }
     await this.generateAndSendOtp(email, 'signup');
+    return { message: "OTP resent successfully", email };
   }
 
-
-  async forgotPassword(email: string): Promise<{ email: string }> {
-    console.log("its forgot password service");
-    
+  async forgotPassword(email: string): Promise<{ message: string; email: string }> {
     const user = await this.userRepository.findByQuery({ email });
     if (!user) {
       throw new Error("User with this email does not exist");
     }
     await this.generateAndSendOtp(email, 'reset');
-    return { email };
+    return { message: "Otp sent successfully fro reset password", email };
   }
 
   async verifyForgotPasswordOtp(email: string, otp: string): Promise<void> {
@@ -198,18 +176,14 @@ class UserService {
       throw new Error("Invalid OTP. Please enter the correct OTP.");
     }
     
-    // Mark OTP as verified for reset flow
-    await redisClient.set(`reset:verified:${email}`, 'true', { EX: 300 });
+    await redisClient.set(`reset:verified:${email}`, 'true', { EX: this.OTP_EXPIRY_SECONDS });
     await redisClient.del(`reset:otp:${email}`);
   }
 
-
   async resetPassword(email: string, otp: string, newPassword: string): Promise<void> {
     const isVerified = await redisClient.get(`reset:verified:${email}`);
-    const storedOtp = await redisClient.get(`reset:otp:${email}`); // Fallback check
-    
-    if (!isVerified && (!storedOtp || storedOtp !== otp)) {
-      throw new Error("OTP not verified or invalid. Please verify OTP first.");
+    if (!isVerified) {
+      throw new Error("OTP not verified. Please verify OTP first.");
     }
 
     const user = await this.userRepository.findByQuery({ email });
@@ -220,13 +194,8 @@ class UserService {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await this.userRepository.update(user._id, { password: hashedPassword });
 
-    // Clean up Redis
-    await Promise.all([
-      redisClient.del(`reset:otp:${email}`),
-      redisClient.del(`reset:verified:${email}`)
-    ]);
+    await redisClient.del(`reset:verified:${email}`);
   }
-  
 }
 
 export default UserService;
