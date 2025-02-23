@@ -1,12 +1,6 @@
 import { Request, Response } from "express";
 import UserService from "../services/UserService";
-import {
-  sendSuccessResponse,
-  sendErrorResponse,
-  filterUserResponse,
-  setAuthCookie,
-  clearAuthCookie,
-} from "../utils/responseUtils";
+import { sendResponse, filterUserResponse, setAuthCookie, clearAuthCookie,} from "../utils/responseUtils";
 
 interface AuthRequest extends Request {
   user?: { userId: string };
@@ -15,74 +9,99 @@ interface AuthRequest extends Request {
 class UserController {
   constructor(private _userService: UserService) {}
 
-  private async handleAuthOperation(
-    req: Request | AuthRequest,
-    res: Response,
-    operation: (data: any) => Promise<{ user: any; accessToken: string; refreshToken: string }>
-  ) {
+  async signUpUser(req: Request, res: Response): Promise<void> {
     try {
-      const result = await operation(req.body);
-      const { user, accessToken, refreshToken } = result;
-
-      setAuthCookie(res, accessToken, refreshToken);
-
-      const filteredUser = filterUserResponse(user);
-
-      sendSuccessResponse(res, {
-        message: "Operation successful",
-        data: { user: filteredUser },
+      const result = await this._userService.initiateSignUp({
+        email: req.body.email,
+        password: req.body.password,
+        userName: req.body.userName,
+        fullName: req.body.fullName,
       });
-    } catch (error: any) {
-      sendErrorResponse(res, error);
-    }
-  }
 
-  private async handleOtpOperation(
-    req: Request,
-    res: Response,
-    operation: (data: any) => Promise<any>
-  ) {
-    try {
-      const result = await operation(req.body);
-      
-      sendSuccessResponse(res, {
-        message: result.message || "Operation successful",
+      sendResponse(res, {
+        success: true,
+        status: 200,
+        message: result.message || "Sign-up initiated successfully",
         data: result.email ? { email: result.email } : {},
       });
     } catch (error: any) {
-      sendErrorResponse(res, error);
+      sendResponse(res, {
+        success: false,
+        status: error.status || 400,
+        message: error.message || "An error occurred during sign-up",
+        data: null,
+      });
     }
   }
 
-  async signUpUser(req: Request, res: Response): Promise<void> {
-    await this.handleOtpOperation(req, res, (data) =>
-      this._userService.initiateSignUp({
-        email: data.email,
-        password: data.password,
-        userName: data.userName,
-        fullName: data.fullName,
-      })
-    );
-  }
-
   async verifyOtp(req: Request, res: Response): Promise<void> {
-    await this.handleAuthOperation(req, res, (data) =>
-      this._userService.verifyOtpAndCreateUser(data.email, data.otp)
-    );
+    try {
+      const { email, otp } = req.body;
+      const result = await this._userService.verifyOtpAndCreateUser(email, otp);
+      const { user, accessToken, refreshToken } = result;
+
+      setAuthCookie(res, accessToken, refreshToken);
+      const filteredUser = filterUserResponse(user);
+
+      sendResponse(res, {
+        success: true,
+        status: 200,
+        message: "OTP verified and user created successfully",
+        data: { user: filteredUser },
+      });
+    } catch (error: any) {
+      sendResponse(res, {
+        success: false,
+        status: error.status || 400,
+        message: error.message || "An error occurred during OTP verification",
+        data: null,
+      });
+    }
   }
 
   async resendOtp(req: Request, res: Response): Promise<void> {
-    await this.handleOtpOperation(req, res, (data) =>
-      this._userService.resendOtp(data.email)
-    );
+    try {
+      const result = await this._userService.resendOtp(req.body.email);
+
+      sendResponse(res, {
+        success: true,
+        status: 200,
+        message: result.message || "OTP resent successfully",
+        data: result.email ? { email: result.email } : {},
+      });
+    } catch (error: any) {
+      sendResponse(res, {
+        success: false,
+        status: error.status || 400,
+        message: error.message || "An error occurred while resending OTP",
+        data: null,
+      });
+    }
   }
 
   async loginUser(req: Request, res: Response): Promise<void> {
-    console.log("it sloginnnnnnnnnnnnnnn");
-    
-    await this.handleAuthOperation(req, res, (data) =>
-      this._userService.loginUser(data.email, data.password)
-    );
+    try {
+      const { email, password } = req.body;
+      const result = await this._userService.loginUser(email, password);
+      const { user, accessToken, refreshToken } = result;
+
+      setAuthCookie(res, accessToken, refreshToken);
+      const filteredUser = filterUserResponse(user);
+
+      sendResponse(res, {
+        success: true,
+        status: 200,
+        message: "Login successful",
+        data: { user: filteredUser },
+      });
+    } catch (error: any) {
+      sendResponse(res, {
+        success: false,
+        status: error.status || 400,
+        message: error.message || "An error occurred during login",
+        data: null,
+      });
+    }
   }
 
   async logout(req: AuthRequest, res: Response): Promise<void> {
@@ -93,50 +112,87 @@ class UserController {
       await this._userService.logout(userId);
       clearAuthCookie(res);
 
-      sendSuccessResponse(res, {
+      sendResponse(res, {
+        success: true,
+        status: 200,
         message: "Logged out successfully",
+        data: null,
       });
     } catch (error: any) {
-      sendErrorResponse(res, error);
+      sendResponse(res, {
+        success: false,
+        status: 400,
+        message: error.message || "An error occurred",
+        data: null,
+      });
     }
   }
 
   async forgotPassword(req: Request, res: Response): Promise<void> {
-    console.log("its forgot password controller");
-    await this.handleOtpOperation(req, res, (data) =>
-      this._userService.forgotPassword(data.email)
-    );
+    try {
+      const result = await this._userService.forgotPassword(req.body.email);
+
+      sendResponse(res, {
+        success: true,
+        status: 200,
+        message: result.message || "Password reset initiated successfully",
+        data: result.email ? { email: result.email } : {},
+      });
+    } catch (error: any) {
+      sendResponse(res, {
+        success: false,
+        status: error.status || 400,
+        message: error.message || "An error occurred during password reset initiation",
+        data: null,
+      });
+    }
   }
-  
+
   async verifyForgotPasswordOtp(req: Request, res: Response): Promise<void> {
     try {
       const { email, otp } = req.body;
       await this._userService.verifyForgotPasswordOtp(email, otp);
-      sendSuccessResponse(res, { 
-        message: "OTP verified successfully",
-        data: { email }
+
+      sendResponse(res, {
+        success: true,
+        status: 200,
+        message: "OTP verified successfully, Now you can enter new and confirm password",
+        data: { email },
       });
     } catch (error: any) {
-      sendErrorResponse(res, error);
+      sendResponse(res, {
+        success: false,
+        status: 400,
+        message: error.message || "An error occurred",
+        data: null,
+      });
     }
   }
 
   async resetPassword(req: Request, res: Response): Promise<void> {
     try {
-      console.log("tttttt",req.body);
-      
       const { email, otp, newPassword } = req.body;
-      if (!email  || !newPassword) {
+      if (!email || !newPassword) {
         throw new Error("All fields are required");
       }
-  
+
       await this._userService.resetPassword(email, otp, newPassword);
-      sendSuccessResponse(res, { message: "Password reset successfully" });
+
+      sendResponse(res, {
+        success: true,
+        status: 200,
+        message: "Password reset successfully",
+        data: null,
+      });
     } catch (error: any) {
-      sendErrorResponse(res, error);
+      sendResponse(res, {
+        success: false,
+        status: 400,
+        message: error.message || "An error occurred",
+        data: null,
+      });
     }
   }
-  
 }
 
 export default UserController;

@@ -1,3 +1,4 @@
+// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\models\UserModel.ts
 import { Schema, model } from "mongoose";
 import { IUser } from "../interfaces/IUser";
 
@@ -12,6 +13,7 @@ const userSchema = new Schema<IUser>({
   problemsSolved: { type: Number, default: 0 },
   rank: { type: Number, default: 0 },
   isBlocked: { type: Boolean, default: false },
+  isPremium: { type: Boolean, default: false },
   subscription: { type: Schema.Types.ObjectId, ref: "Subscription" },
   solvedProblems: [{ type: Schema.Types.ObjectId, ref: "SolvedProblem" }],
   submissions: [{ type: Schema.Types.ObjectId, ref: "Submission" }],

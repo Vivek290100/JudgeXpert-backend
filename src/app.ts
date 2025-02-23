@@ -1,3 +1,4 @@
+// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\app.ts
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -8,6 +9,7 @@ import connectDB from "./database/connectDb";
 import userRouter from "./routes/UserRoutes";
 import { responseLogger } from "./middlewares/logger";
 import {CONFIG} from "./config/config"
+import adminRouter from "./routes/AdminRoutes";
 
 dotenv.config();
 connectDB();
@@ -34,6 +36,7 @@ app.use(responseLogger);
 app.use(cookieParser());
 
 app.use("/", userRouter);
+app.use("/admin", adminRouter)
 
 
 export default app;
