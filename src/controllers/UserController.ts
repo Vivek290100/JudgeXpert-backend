@@ -1,13 +1,13 @@
 import { Request, Response } from "express";
-import UserService from "../services/UserService";
 import { sendResponse, filterUserResponse, setAuthCookie, clearAuthCookie,} from "../utils/responseUtils";
+import { IUserService } from "../interfaces/IUserService";
 
 interface AuthRequest extends Request {
   user?: { userId: string };
+  file?: Express.Multer.File;
 }
-
 class UserController {
-  constructor(private _userService: UserService) {}
+  constructor(private _userService: IUserService) {}
 
   async signUpUser(req: Request, res: Response): Promise<void> {
     try {
@@ -193,6 +193,47 @@ class UserController {
       });
     }
   }
+
+  async updateProfile(req: AuthRequest, res: Response): Promise<void> {
+    console.log("Updating profile in controller");
+    try {
+      const userId = req.user?.userId;
+      if (!userId) throw new Error("Unauthorized: No user ID found");
+
+      const { fullName, github, linkedin } = req.body;
+      const profileImage = req.file; // Multer provides the file object
+
+      const updatedUser = await this._userService.updateProfile({
+        userId,
+        fullName,
+        github,
+        linkedin,
+        profileImage, // Pass the file object directly
+      });
+      
+
+      console.log("Raw Updated User:", updatedUser); 
+    const filteredUser = filterUserResponse(updatedUser);
+    console.log("Filtered User Response:", filteredUser);
+      
+
+      sendResponse(res, {
+        success: true,
+        status: 200,
+        message: "Profile updated successfully",
+        data: { user: filterUserResponse(updatedUser) },
+      });
+    } catch (error: any) {
+      sendResponse(res, {
+        success: false,
+        status: 400,
+        message: error.message || "An error occurred",
+        data: null,
+      });
+    }
+  }
+
+
 }
 
 export default UserController;

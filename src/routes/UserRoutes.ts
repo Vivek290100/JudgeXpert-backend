@@ -3,6 +3,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import authMiddleware from "../middlewares/authMiddleware";
 import { UserRoutes } from "../constants/routes";
 import {Dependencies} from "../utils/dependencies"
+import { upload } from "../utils/multer";
 
 const userRouter = Router();
 const userController = Dependencies.userController;
@@ -17,6 +18,7 @@ userRouter.post(UserRoutes.FORGOT_PASSWORD, userController.forgotPassword.bind(u
 userRouter.post(UserRoutes.RESET_PASSWORD, userController.resetPassword.bind(userController));
 userRouter.post(UserRoutes.VERIFY_FORGOT_PASSWORD_OTP, userController.verifyForgotPasswordOtp.bind(userController));
 
+userRouter.put(UserRoutes.UPDATE_PROFILE,authMiddleware, upload.single("profileImage"), userController.updateProfile.bind(userController));
 
 // Error handling middleware
 userRouter.use((err: Error, req: Request, res: Response, next: NextFunction) => {

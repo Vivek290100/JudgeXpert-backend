@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
 import { sendResponse } from "../utils/responseUtils";
-import AdminService from "../services/AdminService";
+import { IAdminService } from "../interfaces/IAdminService";
 
 class AdminController {
-  constructor(private adminService: AdminService) {}
+  constructor(private adminService: IAdminService) {}
 
   async getAllUsers(req: Request, res: Response): Promise<void> {
     try {

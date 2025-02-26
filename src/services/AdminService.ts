@@ -1,8 +1,9 @@
 // C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\services\AdminService.ts
+import { IAdminService } from "../interfaces/IAdminService";
 import { IUser } from "../interfaces/IUser";
 import UserRepository from "../repositories/UserRepository";
 
-class AdminService {
+class AdminService implements IAdminService {
   constructor(private userRepository: UserRepository) {}
 
   async getAllUsers(page: number = 1, limit: number = 10): Promise<{ users: IUser[], total: number }> {
