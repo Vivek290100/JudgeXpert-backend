@@ -9,6 +9,10 @@ class UserRepository extends BaseRepository<IUser> {
     super(User);
   }
 
+  async findByQuery(query: FilterQuery<IUser>): Promise<IUser | null> {
+    return this.model.findOne(query).exec();
+  }
+
   async findPaginated(page: number, limit: number, query: FilterQuery<IUser> = {}): Promise<{ users: IUser[], total: number }> {
     const skip = (page - 1) * limit;
     const [users, total] = await Promise.all([

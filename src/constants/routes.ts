@@ -7,7 +7,8 @@ export const UserRoutes = {
     LOGOUT: "/logout",
     FORGOT_PASSWORD: "/forgot-password",
     VERIFY_FORGOT_PASSWORD_OTP: "/verify-forgot-password-otp",
-    RESET_PASSWORD: "/reset-password"
+    RESET_PASSWORD: "/reset-password",
+    UPDATE_PROFILE: "/update-profile"
 } as const;
 
 export const AdminRoutes = {

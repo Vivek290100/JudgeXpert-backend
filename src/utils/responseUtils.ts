@@ -22,17 +22,21 @@ export const sendResponse = (
 
 
 export const filterUserResponse = (user: any) => ({
-  id: user._id,
+  id: user._id.toString(),
   userName: user.userName,
-  fullName: user.fullName,
+  fullName: user.fullName || "",
   email: user.email,
   profileImage:
     user.profileImage ||
     "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?fit=crop&w=32&h=32",
-  role: user.role,
+  role: user.role, // Ensure this is included
   joinedDate: user.joinedDate,
   problemsSolved: user.problemsSolved ?? 0,
   rank: user.rank ?? 0,
+  isPremium: user.isPremium ?? false, // Add missing field
+  isGoogleAuth: user.isGoogleAuth ?? false, // Add missing field
+  github: user.github || "",
+  linkedin: user.linkedin || "",
 });
 
 // Helper to set authentication cookie

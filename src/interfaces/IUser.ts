@@ -14,10 +14,9 @@ export interface IUser extends Document {
   rank: number;
   isBlocked: boolean;
   isPremium: boolean;
-  subscription?: Types.ObjectId;
-  solvedProblems: Types.ObjectId[];
-  submissions: Types.ObjectId[];
-  contestParticipations: Types.ObjectId[];
+  isGoogleAuth: boolean;
+  github?: string;      
+  linkedin?: string;
 }
 
 

@@ -12,4 +12,8 @@ export const CONFIG = {
   BREVO_API_KEY: process.env.BREVO_API_KEY || "",
   FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:4000",
   DB_URI: process.env.MONGO_URI || "", 
+  S3_BUCKET_NAME: process.env.S3_BUCKET_NAME || "judgexpert-images",
+  S3_BUCKET_REGION: process.env.S3_BUCKET_REGION || "ap-southeast-2",
+  S3_ACCESS_KEY: process.env.S3_ACCESS_KEY || "",
+  S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY || "",
 };

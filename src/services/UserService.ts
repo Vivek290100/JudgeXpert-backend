@@ -6,8 +6,11 @@ import { sendOtpEmail } from "../utils/emailBrevo";
 import JWTService from "../utils/jwt";
 import UserRepository from "../repositories/UserRepository";
 import RefreshTokenRepository from "../repositories/RefreshTokenRepository";
+import { IUserService } from "../interfaces/IUserService";
+import { uploadToS3 } from "../utils/s3";
 
-class UserService {
+
+class UserService implements IUserService {
   private readonly OTP_EXPIRY_SECONDS = 300;
 
   constructor(
@@ -195,6 +198,33 @@ class UserService {
     await this.userRepository.update(user._id, { password: hashedPassword });
 
     await redisClient.del(`reset:verified:${email}`);
+  }
+
+
+  async updateProfile(data: {
+    userId: string;
+    fullName?: string;
+    github?: string;
+    linkedin?: string;
+    profileImage?: Express.Multer.File; // Updated type
+  }): Promise<IUser> {
+    console.log("Updating user profile in service");
+
+    const updateData: Partial<IUser> = {};
+    if (data.fullName) updateData.fullName = data.fullName;
+    if (data.github) updateData.github = data.github;
+    if (data.linkedin) updateData.linkedin = data.linkedin;
+
+    // Handle profile image upload to S3
+    if (data.profileImage) {
+      const s3Url = await uploadToS3(data.profileImage);
+      updateData.profileImage = s3Url; // Store the S3 URL
+    }
+
+    const updatedUser = await this.userRepository.update(data.userId, updateData);
+    if (!updatedUser) throw new Error("User not found");
+
+    return updatedUser;
   }
 }
 

@@ -12,9 +12,9 @@ class BaseRepository<T extends Document> implements IBaseRepository<T> {
   async create(data: Partial<T>): Promise<T> {
     return await this.model.create(data);
   }
-  async findByQuery(query: FilterQuery<T>): Promise<T | null> {
-    return await this.model.findOne(query)
-  }
+  // async findByQuery(query: FilterQuery<T>): Promise<T | null> {
+  //   return await this.model.findOne(query)
+  // }
 
   async findAll(): Promise<T[]> {
     return await this.model.find()
@@ -25,7 +25,7 @@ class BaseRepository<T extends Document> implements IBaseRepository<T> {
   }
 
   async update(id: string, data: Partial<T>): Promise<T | null> {
-    return await this.model.findByIdAndUpdate(id, data, { new: true });
+    return await this.model.findByIdAndUpdate(id, data, { new: true }).exec();
   }
 
   async delete(id: string): Promise<T | null> {
