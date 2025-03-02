@@ -17,6 +17,7 @@ const userSchema = new Schema<IUser>({
   isGoogleAuth: { type: Boolean, default: false },
   github: { type: String },
   linkedin: { type: String },
+  
 });
 
 const User = model<IUser>("User", userSchema);

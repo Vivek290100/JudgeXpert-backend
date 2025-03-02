@@ -1,7 +1,7 @@
 // C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\middlewares\authMiddleware.ts
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { CONFIG } from "../config/config";
+import { CONFIG } from "../config/Config";
 
 interface AuthRequest extends Request {
   user?: { userId: string };
