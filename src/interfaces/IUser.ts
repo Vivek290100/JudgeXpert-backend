@@ -1,5 +1,5 @@
 // C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\interfaces\IUser.ts
-import { Document, Types } from "mongoose";
+import { Document, Schema, Types } from "mongoose";
 
 export interface IUser extends Document {
   _id: string;
@@ -10,7 +10,9 @@ export interface IUser extends Document {
   role: string,
   profileImage: string,
   joinedDate?: Date;
-  problemsSolved: number;
+  problemsSolved: [{
+    equals(_id: string): unknown; type: Schema.Types.ObjectId, ref: "Problem" 
+}], // Array of problem IDs
   rank: number;
   isBlocked: boolean;
   isPremium: boolean;

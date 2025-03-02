@@ -32,7 +32,7 @@ export async function uploadToS3(file: Express.Multer.File): Promise<string> {
       Key: key,
     };
     const command = new GetObjectCommand(getObjectParams);
-    const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // URL expires in 1 hour
+    const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 604800 });
 
     return signedUrl;
 

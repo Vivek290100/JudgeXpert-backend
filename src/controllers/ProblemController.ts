@@ -1,12 +1,23 @@
-// src/controllers/ProblemController.ts (unchanged, but verified)
 import { Request, Response } from "express";
 import { sendResponse } from "../utils/responseUtils";
 import ProblemService from "../services/ProblemService";
-import fs from "fs"; // Node.js built-in module
-import path from "path"; // Node.js built-in module
+import fs from "fs";
+import path from "path";
 import { generateBoilerplateForProblem } from "../scripts/generateBoilerplate";
-import { FilterQuery } from "mongoose";
-import { IProblem } from "../interfaces/IProblem";
+import Problem from "../models/ProblemModel";
+
+export const filterProblemResponse = (problem: any) => ({
+  id: problem._id.toString(),
+  _id: problem._id.toString(), // Include both for compatibility
+  title: problem.title,
+  slug: problem.slug,
+  difficulty: problem.difficulty,
+  status: problem.status,
+  updatedAt: problem.updatedAt,
+  description: problem.description || "",
+  defaultCodeIds: problem.defaultCodeIds || [],
+  testCaseIds: problem.testCaseIds || [],
+});
 
 class ProblemController {
   constructor(private problemService: ProblemService) {}
@@ -14,31 +25,22 @@ class ProblemController {
   async createProblem(req: Request, res: Response): Promise<void> {
     try {
       const problemDir = req.body.problemDir;
-      console.log("problem controller problemDir",problemDir);
-      
-      if (!problemDir) {
-        throw new Error("problemDir is required");
-      }
-      console.log("problemDir", problemDir);
+      if (!problemDir) throw new Error("problemDir is required");
 
       const problem = await this.problemService.createProblemFromFiles(problemDir);
-      console.log("problemproblem",problem);
-      
-      if (!problem) {
-        throw new Error("Failed to create or update problem: no document returned");
-      }
+      if (!problem) throw new Error("Failed to create or update problem: no document returned");
 
       sendResponse(res, {
         success: true,
         status: 201,
         message: "Problem created successfully",
-        data: { problem: { id: problem._id, title: problem.title, slug: problem.slug } },
+        data: { problem: filterProblemResponse(problem) },
       });
     } catch (error: any) {
       sendResponse(res, {
         success: false,
-        status: 400,
-        message: error.message || "Failed to create problem",
+        status: error.status || 400,
+        message: error.message || "An error occurred during problem creation",
         data: null,
       });
     }
@@ -46,20 +48,22 @@ class ProblemController {
 
   async getProblemById(req: Request, res: Response): Promise<void> {
     try {
-      const problem = await this.problemService.getProblemById(req.params.id);
+      const problem = await Problem.findById(req.params.id)
+        .populate("defaultCodeIds")
+        .populate("testCaseIds");
       if (!problem) throw new Error("Problem not found");
 
       sendResponse(res, {
         success: true,
         status: 200,
         message: "Problem fetched successfully",
-        data: { problem },
+        data: { problem: filterProblemResponse(problem) },
       });
     } catch (error: any) {
       sendResponse(res, {
         success: false,
-        status: 404,
-        message: error.message || "Problem not found",
+        status: error.status || 404,
+        message: error.message || "An error occurred while fetching the problem",
         data: null,
       });
     }
@@ -74,144 +78,122 @@ class ProblemController {
         success: true,
         status: 200,
         message: "Problem fetched successfully",
-        data: { problem },
+        data: { problem: filterProblemResponse(problem) },
       });
     } catch (error: any) {
       sendResponse(res, {
         success: false,
-        status: 404,
-        message: error.message || "Problem not found",
+        status: error.status || 404,
+        message: error.message || "An error occurred while fetching the problem",
         data: null,
       });
     }
   }
-
-  
 
   async updateProblemStatus(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
       const { status } = req.body;
-  
+
       if (!["premium", "free"].includes(status)) {
         throw new Error("Invalid status value");
       }
-  
+
       const problem = await this.problemService.updateProblemStatus(id, status as "premium" | "free");
-  
-      if (!problem) {
-        throw new Error("Problem not found");
-      }
-  
+      if (!problem) throw new Error("Problem not found");
+
+      // Populate the updated problem for the response
+      const populatedProblem = await Problem.findById(id)
+        .populate("defaultCodeIds")
+        .populate("testCaseIds");
+
       sendResponse(res, {
         success: true,
         status: 200,
         message: "Problem status updated successfully",
-        data: { problem },
+        data: { problem: filterProblemResponse(populatedProblem || problem) },
       });
     } catch (error: any) {
       sendResponse(res, {
         success: false,
-        status: 400,
-        message: error.message || "Failed to update problem status",
+        status: error.status || 400,
+        message: error.message || "An error occurred while updating problem status",
         data: null,
       });
     }
   }
 
-  // Process a single problem (admin-only)
   async processSpecificProblem(req: Request, res: Response): Promise<void> {
     try {
-      console.log("inside the processSpecificProblem controller");
-      
       const problemDir = req.body.problemDir;
-      console.log("problemDir", problemDir);
-      
-      if (!problemDir) {
-        throw new Error("problemDir is required");
-      }
+      if (!problemDir) throw new Error("problemDir is required");
 
       const problem = await this.problemService.processSpecificProblem(problemDir);
-      console.log("problem", problem);
-      
-      if (!problem) {
-        throw new Error("Failed to process problem: no document returned");
-      }
+      if (!problem) throw new Error("Failed to process problem: no document returned");
 
       sendResponse(res, {
         success: true,
         status: 201,
         message: "Problem processed successfully",
-        data: { problem: { id: problem._id, title: problem.title, slug: problem.slug } },
+        data: { problem: filterProblemResponse(problem) },
       });
     } catch (error: any) {
       sendResponse(res, {
         success: false,
-        status: 400,
-        message: error.message || "Failed to process problem",
+        status: error.status || 400,
+        message: error.message || "An error occurred while processing the problem",
         data: null,
       });
     }
   }
 
   async getProblems(req: Request, res: Response): Promise<void> {
+    const { page = 1, limit = 10, search = "" } = req.query;
+    const query = search ? { title: { $regex: search, $options: "i" } } : {};
+
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 10;
-      const search = (req.query.search as string) || "";
-  
-      const query: FilterQuery<IProblem> = {
-        // Remove or update status filter based on your needs
-        // Option 1: No status filter (fetch all problems)
-        // Option 2: Filter for "free" problems only (e.g., for non-premium users)
-        // status: "free",
-        // Option 3: Filter for both "premium" and "free"
-        status: { $in: ["premium", "free"] },
-      };
-      if (search) {
-        query.$or = [
-          { title: { $regex: search, $options: "i" } },
-          { slug: { $regex: search, $options: "i" } },
-        ];
-      }
-  
-      const { problems, total } = await this.problemService.getProblemsPaginated(page, limit, query);
-      console.log("444444444444", problems, total, limit, page);
-  
+      const problems = await Problem.find(query)
+        .skip((+page - 1) * +limit)
+        .limit(+limit)
+        .populate("defaultCodeIds")
+        .populate("testCaseIds");
+
+      const total = await Problem.countDocuments(query);
+
+      const normalizedProblems = problems.map((problem) => filterProblemResponse(problem));
+
       sendResponse(res, {
         success: true,
         status: 200,
         message: "Problems fetched successfully",
         data: {
-          problems,
+          problems: normalizedProblems,
           total,
-          totalPages: Math.ceil(total / limit),
-          currentPage: page,
+          totalPages: Math.ceil(total / +limit),
+          currentPage: +page,
         },
       });
     } catch (error: any) {
       sendResponse(res, {
         success: false,
-        status: 500,
-        message: error.message || "Failed to fetch problems",
+        status: error.status || 500,
+        message: error.message || "An error occurred while fetching problems",
         data: null,
       });
     }
   }
 
- 
-
-  // Generate boilerplate for all problems (admin-only)
   async generateAllBoilerplate(req: Request, res: Response): Promise<void> {
     try {
       const basePath = process.env.PROBLEM_BASE_PATH || path.join(__dirname, "../problems");
       const problemDirs = fs.readdirSync(basePath, { withFileTypes: true })
-        .filter(dirent => dirent.isDirectory())
-        .map(dirent => dirent.name);
+        .filter((dirent) => dirent.isDirectory())
+        .map((dirent) => dirent.name);
 
       for (const problemDir of problemDirs) {
         await generateBoilerplateForProblem(problemDir);
       }
+
       sendResponse(res, {
         success: true,
         status: 200,
@@ -221,22 +203,20 @@ class ProblemController {
     } catch (error: any) {
       sendResponse(res, {
         success: false,
-        status: 500,
-        message: error.message || "Failed to generate boilerplates",
+        status: error.status || 500,
+        message: error.message || "An error occurred while generating boilerplates",
         data: null,
       });
     }
   }
 
-  // Generate boilerplate for a specific problem (admin-only)
   async generateSpecificBoilerplate(req: Request, res: Response): Promise<void> {
     try {
       const problemDir = req.body.problemDir;
-      if (!problemDir) {
-        throw new Error("problemDir is required");
-      }
+      if (!problemDir) throw new Error("problemDir is required");
 
       await generateBoilerplateForProblem(problemDir);
+
       sendResponse(res, {
         success: true,
         status: 200,
@@ -246,8 +226,8 @@ class ProblemController {
     } catch (error: any) {
       sendResponse(res, {
         success: false,
-        status: 400,
-        message: error.message || "Failed to generate boilerplate",
+        status: error.status || 400,
+        message: error.message || "An error occurred while generating boilerplate",
         data: null,
       });
     }

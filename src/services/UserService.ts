@@ -206,7 +206,7 @@ class UserService implements IUserService {
     fullName?: string;
     github?: string;
     linkedin?: string;
-    profileImage?: Express.Multer.File; // Updated type
+    profileImage?: Express.Multer.File;
   }): Promise<IUser> {
     console.log("Updating user profile in service");
 
