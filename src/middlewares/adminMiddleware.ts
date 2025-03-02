@@ -1,7 +1,7 @@
 // C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\middlewares\adminMiddleware.ts
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { CONFIG } from "../config/config";
+import { CONFIG } from "../config/Config";
 import { Dependencies } from "../utils/dependencies";
 import { sendResponse } from "../utils/responseUtils";
 
@@ -10,6 +10,8 @@ interface AuthRequest extends Request {
 }
 
 const adminMiddleware = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  console.log("aaaaaaaaaaaaaaaaaaaaaa");
+  
   const token = req.cookies?.accessToken;
   if (!token) {
     sendResponse(res, {

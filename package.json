@@ -7,6 +7,7 @@
     "dev": "nodemon src/server.ts",
     "start": "node dist/app.js",
     "build": "tsc"
+ 
   },
   "author": "Vivek",
   "license": "ISC",

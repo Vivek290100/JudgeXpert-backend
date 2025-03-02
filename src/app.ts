@@ -8,8 +8,10 @@ import mongoSanitize from "express-mongo-sanitize";
 import connectDB from "./database/connectDb";
 import userRouter from "./routes/UserRoutes";
 import { responseLogger } from "./middlewares/logger";
-import {CONFIG} from "./config/config"
+import {CONFIG} from "./config/Config"
 import adminRouter from "./routes/AdminRoutes";
+import problemRouter from "./routes/ProblemRoutes";
+
 
 dotenv.config();
 connectDB();
@@ -37,6 +39,8 @@ app.use(cookieParser());
 
 app.use("/", userRouter);
 app.use("/admin", adminRouter)
+app.use("/problems", problemRouter);
+
 
 
 export default app;

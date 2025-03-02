@@ -1,7 +1,7 @@
 // C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\utils\jwt.ts
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
-import { CONFIG } from "../config/config";
+import { CONFIG } from "../config/Config";
 
 dotenv.config();
 
