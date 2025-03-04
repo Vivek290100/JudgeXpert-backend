@@ -1,3 +1,4 @@
+// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\config\Languages.ts
 export interface LanguageConfig {
     name: string; 
     id: number;   // Judge0 language ID

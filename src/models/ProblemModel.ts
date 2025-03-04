@@ -1,7 +1,6 @@
 import { IProblem } from "../interfaces/IProblem";
 import { model, Schema } from "mongoose";
-import TestCase from "./TestCaseModel";
-import DefaultCode from "./DefaultCodeModel";
+
 
 const problemSchema = new Schema<IProblem>({
   title: { type: String, required: true },

@@ -1,6 +1,8 @@
 import { Document, Types } from "mongoose";
 
 export interface IProblem extends Document {
+  solved: any;
+  isPremium: any;
   _id: string;
   title: string;
   description: string;

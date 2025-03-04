@@ -10,7 +10,6 @@ import userRouter from "./routes/UserRoutes";
 import { responseLogger } from "./middlewares/logger";
 import {CONFIG} from "./config/Config"
 import adminRouter from "./routes/AdminRoutes";
-import problemRouter from "./routes/ProblemRoutes";
 
 
 dotenv.config();
@@ -26,7 +25,7 @@ app.use(
   cors({
     origin: CONFIG.FRONTEND_URL,
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
@@ -39,7 +38,6 @@ app.use(cookieParser());
 
 app.use("/", userRouter);
 app.use("/admin", adminRouter)
-app.use("/problems", problemRouter);
 
 
 
