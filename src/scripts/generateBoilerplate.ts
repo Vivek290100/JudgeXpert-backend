@@ -77,5 +77,4 @@ async function main(): Promise<void> {
   }
 }
 
-// Keep main() commented out for manual execution only
-// main();
+main();

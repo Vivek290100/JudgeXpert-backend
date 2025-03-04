@@ -53,17 +53,41 @@ export class ProblemDefinitionParser {
       throw new Error(`Unsupported language: ${language}`);
     }
 
-    const inputs = this.inputFields.map((field) => `${field.type} ${field.name}`).join(", ");
+    const inputs = this.inputFields.map((field) => `${field.name}`).join(", "); // Remove types for JS
     switch (language.toLowerCase()) {
       case "cpp":
-        return `${this.outputFields[0].type} ${this.functionName}(${inputs}) {\n    // Implementation goes here\n    return result;\n}`;
+        return `${this.outputFields[0].type} ${this.functionName}(${this.inputFields.map((field) => `${this.mapTypeToLanguage(field.type, language)} ${field.name}`).join(", ")}) {\n    // Implementation goes here\n    return result;\n}`;
       case "js":
         return `function ${this.functionName}(${inputs}) {\n    // Implementation goes here\n    return result;\n}`;
       case "rust":
         const outputType = this.mapTypeToRust(this.outputFields[0].type);
-        return `fn ${this.functionName}(${inputs}) -> ${outputType} {\n    // Implementation goes here\n    result\n}`;
+        return `fn ${this.functionName}(${this.inputFields.map((field) => `${this.mapTypeToLanguage(field.type, language)} ${field.name}`).join(", ")}) -> ${outputType} {\n    // Implementation goes here\n    result\n}`;
       default:
         throw new Error(`No boilerplate generator for language: ${language}`);
+    }
+  }
+
+  mapTypeToLanguage(type: string, language: string): string {
+    switch (language.toLowerCase()) {
+      case "cpp":
+        switch (type) {
+          case "int": return "int";
+          case "float": return "float";
+          case "string": return "std::string";
+          case "bool": return "bool";
+          case "list<int>": return "std::vector<int>";
+          case "list<float>": return "std::vector<float>";
+          case "list<string>": return "std::vector<std::string>";
+          case "list<bool>": return "std::vector<bool>";
+          default: return "unknown";
+        }
+      case "js":
+        // No type mapping needed for JS since we don’t include types in the function signature
+        return "";
+      case "rust":
+        return this.mapTypeToRust(type); // Reuse the existing Rust mapping
+      default:
+        throw new Error(`No type mapping for language: ${language}`);
     }
   }
 
@@ -159,53 +183,6 @@ println!("{}", result);
         `;
       default:
         throw new Error(`No full boilerplate generator for language: ${language}`);
-    }
-  }
-
-  mapTypeToLanguage(type: string, language: string): string {
-    switch (language.toLowerCase()) {
-      case "cpp":
-        switch (type) {
-          case "int": return "int";
-          case "float": return "float";
-          case "string": return "std::string";
-          case "bool": return "bool";
-          case "list<int>": return "std::vector<int>";
-          case "list<float>": return "std::vector<float>";
-          case "list<string>": return "std::vector<std::string>";
-          case "list<bool>": return "std::vector<bool>";
-          default: return "unknown";
-        }
-      case "js":
-        switch (type) {
-          case "int": return "number";
-          case "float": return "number";
-          case "string": return "string";
-          case "bool": return "boolean";
-          case "list<int>": return "number[]";
-          case "list<float>": return "number[]";
-          case "list<string>": return "string[]";
-          case "list<bool>": return "boolean[]";
-          default: return "unknown";
-        }
-      case "rust":
-        return this.mapTypeToRust(type); // Reuse the existing Rust mapping
-      default:
-        throw new Error(`No type mapping for language: ${language}`);
-    }
-  }
-
-  mapTypeToRust(type: string): string {
-    switch (type) {
-      case "int": return "i32";
-      case "float": return "f64";
-      case "string": return "String";
-      case "bool": return "bool";
-      case "list<int>": return "Vec<i32>";
-      case "list<float>": return "Vec<f64>";
-      case "list<string>": return "Vec<String>";
-      case "list<bool>": return "Vec<bool>";
-      default: return "unknown";
     }
   }
 }

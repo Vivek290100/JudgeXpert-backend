@@ -179,6 +179,10 @@ class ProblemService implements IProblemService {
     }
     return this.problemRepository.update(id, { status });
   }
+
+  async updateProblem(id: string, updates: Partial<IProblem>): Promise<IProblem | null> {
+    return this.problemRepository.update(id, updates);
+  }
 }
 
 export default ProblemService;

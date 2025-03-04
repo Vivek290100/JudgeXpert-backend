@@ -23,6 +23,7 @@ adminRouter.get("/problems/:id", adminMiddleware, problemController.getProblemBy
 adminRouter.post("/problems", adminMiddleware, problemController.createProblem.bind(problemController));
 adminRouter.patch("/problems/:id/status", adminMiddleware, problemController.updateProblemStatus.bind(problemController));
 adminRouter.post("/problems/single", adminMiddleware, problemController.processSpecificProblem.bind(problemController));
+adminRouter.patch("/problems/:id", adminMiddleware, problemController.updateProblem.bind(problemController));
 
 
 export default adminRouter;

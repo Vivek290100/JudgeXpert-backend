@@ -1,3 +1,4 @@
+// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\controllers\ProblemController.ts
 import { Request, Response } from "express";
 import { sendResponse } from "../utils/responseUtils";
 import ProblemService from "../services/ProblemService";
@@ -5,10 +6,13 @@ import fs from "fs";
 import path from "path";
 import { generateBoilerplateForProblem } from "../scripts/generateBoilerplate";
 import Problem from "../models/ProblemModel";
+import { AuthRequest } from "../middlewares/authMiddleware";
+import User from "../models/UserModel";
+import { IUser } from "../interfaces/IUser";
 
 export const filterProblemResponse = (problem: any) => ({
   id: problem._id.toString(),
-  _id: problem._id.toString(), // Include both for compatibility
+  _id: problem._id.toString(),
   title: problem.title,
   slug: problem.slug,
   difficulty: problem.difficulty,
@@ -147,29 +151,66 @@ class ProblemController {
     }
   }
 
-  async getProblems(req: Request, res: Response): Promise<void> {
-    const { page = 1, limit = 10, search = "" } = req.query;
-    const query = search ? { title: { $regex: search, $options: "i" } } : {};
-
+  async getProblems(req: AuthRequest, res: Response): Promise<void> {
+    const { page = 1, limit = 10, search = "", difficulty, solved, status } = req.query;
+    const query: any = {};
+  
+    // Apply search filter
+    if (search) {
+      query.title = { $regex: search, $options: "i" };
+    }
+  
+    // Apply difficulty filter
+    if (difficulty && ["EASY", "MEDIUM", "HARD"].includes(difficulty as string)) {
+      query.difficulty = difficulty;
+    }
+  
+    // Apply status filter (premium/free)
+    if (status && ["premium", "free"].includes(status as string)) {
+      query.status = status;
+    }
+  
+    const userId = req.user?.userId; // From authMiddleware
+  
     try {
       const problems = await Problem.find(query)
         .skip((+page - 1) * +limit)
         .limit(+limit)
         .populate("defaultCodeIds")
         .populate("testCaseIds");
-
+  
       const total = await Problem.countDocuments(query);
-
-      const normalizedProblems = problems.map((problem) => filterProblemResponse(problem));
-
+      let normalizedProblems = problems.map((problem) => filterProblemResponse(problem));
+  
+      // Fetch the authenticated user's solvedProblems with proper typing
+      let userProblemStatus: { problemId: string; solved: boolean }[] = [];
+      if (userId) {
+        const user = (await User.findById(userId).select("solvedProblems")) as IUser | null;
+        const solvedProblems = user?.problemsSolved || [];
+        userProblemStatus = normalizedProblems.map((problem) => ({
+          problemId: problem.id,
+          solved: solvedProblems.some((id) => id.toString() === problem.id),
+        }));
+  
+        // Apply solved filter if specified
+        if (solved === "true" || solved === "false") {
+          const isSolved = solved === "true";
+          userProblemStatus = userProblemStatus.filter((status) => status.solved === isSolved);
+          normalizedProblems = normalizedProblems.filter((problem) =>
+            userProblemStatus.some((status) => status.problemId === problem.id && status.solved === isSolved)
+          );
+        }
+      }
+  
       sendResponse(res, {
         success: true,
         status: 200,
         message: "Problems fetched successfully",
         data: {
           problems: normalizedProblems,
-          total,
-          totalPages: Math.ceil(total / +limit),
+          userProblemStatus,
+          total: normalizedProblems.length, // Update total based on filters
+          totalPages: Math.ceil(normalizedProblems.length / +limit),
           currentPage: +page,
         },
       });
@@ -228,6 +269,39 @@ class ProblemController {
         success: false,
         status: error.status || 400,
         message: error.message || "An error occurred while generating boilerplate",
+        data: null,
+      });
+    }
+  }
+
+  async updateProblem(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const updates = req.body; // Expecting { difficulty: "EASY" | "MEDIUM" | "HARD" }
+
+      const validDifficulties = ["EASY", "MEDIUM", "HARD"];
+      if (updates.difficulty && !validDifficulties.includes(updates.difficulty)) {
+        throw new Error("Invalid difficulty value");
+      }
+      
+      const problem = await this.problemService.updateProblem(id, updates);
+      if (!problem) throw new Error("Problem not found");
+
+      const populatedProblem = await Problem.findById(id)
+        .populate("defaultCodeIds")
+        .populate("testCaseIds");
+
+      sendResponse(res, {
+        success: true,
+        status: 200,
+        message: "Problem updated successfully",
+        data: { problem: filterProblemResponse(populatedProblem || problem) },
+      });
+    } catch (error: any) {
+      sendResponse(res, {
+        success: false,
+        status: error.status || 400,
+        message: error.message || "An error occurred while updating problem",
         data: null,
       });
     }

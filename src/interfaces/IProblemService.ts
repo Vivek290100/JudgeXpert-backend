@@ -1,7 +1,7 @@
 // src/interfaces/IProblemService.ts
 import { IProblem } from "./IProblem";
 import ProblemRepository from "../repositories/ProblemRepository";
-import { FilterQuery } from "mongoose";
+import { FilterQuery, UpdateQuery } from "mongoose";
 
 export interface IProblemService {
   problemRepository: ProblemRepository;
@@ -16,4 +16,5 @@ export interface IProblemService {
     query?: FilterQuery<IProblem>
   ): Promise<{ problems: IProblem[]; total: number }>;
   updateProblemStatus(id: string, status: "premium" | "free"): Promise<IProblem | null>;
+  updateProblem(id: string, updates: UpdateQuery<IProblem>): Promise<IProblem | null>;
 }
