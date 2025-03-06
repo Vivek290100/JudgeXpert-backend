@@ -10,9 +10,7 @@ export interface IUser extends Document {
   role: string,
   profileImage: string,
   joinedDate?: Date;
-  problemsSolved: [{
-    equals(_id: string): unknown; type: Schema.Types.ObjectId, ref: "Problem" 
-}], // Array of problem IDs
+  problemsSolved: [{equals(_id: string): unknown; type: Schema.Types.ObjectId, ref: "Problem"}],
   rank: number;
   isBlocked: boolean;
   isPremium: boolean;

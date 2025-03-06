@@ -1,9 +1,13 @@
+// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\repositories\ProblemRepository.ts
 import { FilterQuery, UpdateQuery } from "mongoose";
 import { IProblem } from "../interfaces/IProblem";
 import Problem from "../models/ProblemModel";
 import BaseRepository from "./BaseRepository";
 
 class ProblemRepository extends BaseRepository<IProblem> {
+  findOne(arg0: { slug: string; }) {
+    throw new Error("Method not implemented.");
+  }
   constructor() {
     super(Problem);
   }

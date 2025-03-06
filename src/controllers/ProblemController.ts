@@ -1,8 +1,8 @@
 // C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\controllers\ProblemController.ts
 import { Request, Response } from "express";
 import { sendResponse } from "../utils/responseUtils";
-import ProblemService from "../services/ProblemService";
-import fs from "fs";
+import { IProblemService } from "../interfaces/IProblemService"; // Import the interface
+import fs from "fs/promises";
 import path from "path";
 import { generateBoilerplateForProblem } from "../scripts/generateBoilerplate";
 import Problem from "../models/ProblemModel";
@@ -24,12 +24,14 @@ export const filterProblemResponse = (problem: any) => ({
 });
 
 class ProblemController {
-  constructor(private problemService: ProblemService) {}
+  constructor(private problemService: IProblemService) {} // Change to IProblemService
 
   async createProblem(req: Request, res: Response): Promise<void> {
     try {
-      const problemDir = req.body.problemDir;
-      if (!problemDir) throw new Error("problemDir is required");
+      const { problemDir } = req.body;
+      if (!problemDir || typeof problemDir !== "string") {
+        throw new Error("problemDir is required and must be a string");
+      }
 
       const problem = await this.problemService.createProblemFromFiles(problemDir);
       if (!problem) throw new Error("Failed to create or update problem: no document returned");
@@ -50,18 +52,24 @@ class ProblemController {
     }
   }
 
+  // ... (rest of the methods remain unchanged, just ensure they use this.problemService)
   async getProblemById(req: Request, res: Response): Promise<void> {
     try {
-      const problem = await Problem.findById(req.params.id)
+      const { id } = req.params;
+      if (!id || typeof id !== "string") throw new Error("Invalid problem ID");
+
+      const problem = await this.problemService.getProblemById(id);
+      if (!problem) throw new Error("Problem not found");
+
+      const populatedProblem = await Problem.findById(problem._id)
         .populate("defaultCodeIds")
         .populate("testCaseIds");
-      if (!problem) throw new Error("Problem not found");
 
       sendResponse(res, {
         success: true,
         status: 200,
         message: "Problem fetched successfully",
-        data: { problem: filterProblemResponse(problem) },
+        data: { problem: filterProblemResponse(populatedProblem || problem) },
       });
     } catch (error: any) {
       sendResponse(res, {
@@ -74,15 +82,32 @@ class ProblemController {
   }
 
   async getProblemBySlug(req: Request, res: Response): Promise<void> {
+    console.log("its getProblemBySlug");
+    
     try {
-      const problem = await this.problemService.getProblemBySlug(req.params.slug);
+      const { slug } = req.params;
+      console.log("444444444",slug);
+      
+      if (!slug || typeof slug !== "string") throw new Error("Invalid slug");
+
+      const problem = await this.problemService.getProblemBySlug(slug);
       if (!problem) throw new Error("Problem not found");
+
+      const populatedProblem = await Problem.findById(problem._id)
+        .populate("defaultCodeIds")
+        .populate("testCaseIds");
 
       sendResponse(res, {
         success: true,
         status: 200,
         message: "Problem fetched successfully",
-        data: { problem: filterProblemResponse(problem) },
+        data: {
+          problem: {
+            ...filterProblemResponse(populatedProblem || problem),
+            defaultCodes: populatedProblem?.defaultCodeIds || [],
+            testCases: populatedProblem?.testCaseIds.slice(0, 2) || [],
+          },
+        },
       });
     } catch (error: any) {
       sendResponse(res, {
@@ -99,14 +124,14 @@ class ProblemController {
       const { id } = req.params;
       const { status } = req.body;
 
+      if (!id || typeof id !== "string") throw new Error("Invalid problem ID");
       if (!["premium", "free"].includes(status)) {
-        throw new Error("Invalid status value");
+        throw new Error("Invalid status value; must be 'premium' or 'free'");
       }
 
       const problem = await this.problemService.updateProblemStatus(id, status as "premium" | "free");
       if (!problem) throw new Error("Problem not found");
 
-      // Populate the updated problem for the response
       const populatedProblem = await Problem.findById(id)
         .populate("defaultCodeIds")
         .populate("testCaseIds");
@@ -129,8 +154,10 @@ class ProblemController {
 
   async processSpecificProblem(req: Request, res: Response): Promise<void> {
     try {
-      const problemDir = req.body.problemDir;
-      if (!problemDir) throw new Error("problemDir is required");
+      const { problemDir } = req.body;
+      if (!problemDir || typeof problemDir !== "string") {
+        throw new Error("problemDir is required and must be a string");
+      }
 
       const problem = await this.problemService.processSpecificProblem(problemDir);
       if (!problem) throw new Error("Failed to process problem: no document returned");
@@ -152,56 +179,57 @@ class ProblemController {
   }
 
   async getProblems(req: AuthRequest, res: Response): Promise<void> {
-    const { page = 1, limit = 10, search = "", difficulty, solved, status } = req.query;
-    const query: any = {};
-  
-    // Apply search filter
-    if (search) {
-      query.title = { $regex: search, $options: "i" };
+    const { page = "1", limit = "10", search = "", difficulty, solved, status } = req.query;
+    const pageNum = parseInt(page as string, 10);
+    const limitNum = parseInt(limit as string, 10);
+
+    if (isNaN(pageNum) || isNaN(limitNum) || pageNum < 1 || limitNum < 1) {
+      throw new Error("Invalid page or limit parameters");
     }
-  
-    // Apply difficulty filter
+
+    const query: any = {};
+    if (search) query.title = { $regex: search, $options: "i" };
     if (difficulty && ["EASY", "MEDIUM", "HARD"].includes(difficulty as string)) {
       query.difficulty = difficulty;
     }
-  
-    // Apply status filter (premium/free)
     if (status && ["premium", "free"].includes(status as string)) {
       query.status = status;
     }
-  
-    const userId = req.user?.userId; // From authMiddleware
-  
+
+    const userId = req.user?.userId;
+
     try {
-      const problems = await Problem.find(query)
-        .skip((+page - 1) * +limit)
-        .limit(+limit)
+      let problems = await Problem.find(query)
         .populate("defaultCodeIds")
         .populate("testCaseIds");
-  
-      const total = await Problem.countDocuments(query);
-      let normalizedProblems = problems.map((problem) => filterProblemResponse(problem));
-  
-      // Fetch the authenticated user's solvedProblems with proper typing
+
+      let total = problems.length;
+
       let userProblemStatus: { problemId: string; solved: boolean }[] = [];
-      if (userId) {
+      if (userId && (solved === "true" || solved === "false")) {
         const user = (await User.findById(userId).select("solvedProblems")) as IUser | null;
         const solvedProblems = user?.problemsSolved || [];
-        userProblemStatus = normalizedProblems.map((problem) => ({
-          problemId: problem.id,
-          solved: solvedProblems.some((id) => id.toString() === problem.id),
+        userProblemStatus = problems.map((problem) => ({
+          problemId: problem._id.toString(),
+          solved: solvedProblems.some((id) => id.toString() === problem._id.toString()),
         }));
-  
-        // Apply solved filter if specified
-        if (solved === "true" || solved === "false") {
-          const isSolved = solved === "true";
-          userProblemStatus = userProblemStatus.filter((status) => status.solved === isSolved);
-          normalizedProblems = normalizedProblems.filter((problem) =>
-            userProblemStatus.some((status) => status.problemId === problem.id && status.solved === isSolved)
-          );
-        }
+
+        const isSolved = solved === "true";
+        problems = problems.filter((problem) =>
+          userProblemStatus.some((status) => status.problemId === problem._id.toString() && status.solved === isSolved)
+        );
+        total = problems.length;
       }
-  
+
+      const paginatedProblems = problems.slice((pageNum - 1) * limitNum, pageNum * limitNum);
+      const normalizedProblems = paginatedProblems.map((problem) => filterProblemResponse(problem));
+
+      if (userId && userProblemStatus.length > 0) {
+        userProblemStatus = userProblemStatus.filter((status) =>
+          normalizedProblems.some((problem) => problem.id === status.problemId)
+        );
+      }
+
       sendResponse(res, {
         success: true,
         status: 200,
@@ -209,9 +237,9 @@ class ProblemController {
         data: {
           problems: normalizedProblems,
           userProblemStatus,
-          total: normalizedProblems.length, // Update total based on filters
-          totalPages: Math.ceil(normalizedProblems.length / +limit),
-          currentPage: +page,
+          total,
+          totalPages: Math.ceil(total / limitNum),
+          currentPage: pageNum,
         },
       });
     } catch (error: any) {
@@ -227,13 +255,11 @@ class ProblemController {
   async generateAllBoilerplate(req: Request, res: Response): Promise<void> {
     try {
       const basePath = process.env.PROBLEM_BASE_PATH || path.join(__dirname, "../problems");
-      const problemDirs = fs.readdirSync(basePath, { withFileTypes: true })
+      const problemDirs = (await fs.readdir(basePath, { withFileTypes: true }))
         .filter((dirent) => dirent.isDirectory())
         .map((dirent) => dirent.name);
 
-      for (const problemDir of problemDirs) {
-        await generateBoilerplateForProblem(problemDir);
-      }
+      await Promise.all(problemDirs.map((problemDir) => generateBoilerplateForProblem(problemDir)));
 
       sendResponse(res, {
         success: true,
@@ -253,8 +279,10 @@ class ProblemController {
 
   async generateSpecificBoilerplate(req: Request, res: Response): Promise<void> {
     try {
-      const problemDir = req.body.problemDir;
-      if (!problemDir) throw new Error("problemDir is required");
+      const { problemDir } = req.body;
+      if (!problemDir || typeof problemDir !== "string") {
+        throw new Error("problemDir is required and must be a string");
+      }
 
       await generateBoilerplateForProblem(problemDir);
 
@@ -277,13 +305,15 @@ class ProblemController {
   async updateProblem(req: Request, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      const updates = req.body; // Expecting { difficulty: "EASY" | "MEDIUM" | "HARD" }
+      const updates = req.body;
+
+      if (!id || typeof id !== "string") throw new Error("Invalid problem ID");
 
       const validDifficulties = ["EASY", "MEDIUM", "HARD"];
       if (updates.difficulty && !validDifficulties.includes(updates.difficulty)) {
         throw new Error("Invalid difficulty value");
       }
-      
+
       const problem = await this.problemService.updateProblem(id, updates);
       if (!problem) throw new Error("Problem not found");
 

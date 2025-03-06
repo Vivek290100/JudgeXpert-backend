@@ -11,7 +11,7 @@ const defaultCodeSchema = new Schema<IDefaultCode>({
       message: props => `${props.value} is not a valid Judge0 language ID`,
     },
   },
-  languageName: { type: String, required: false }, // Optional for reference
+  languageName: { type: String, required: false }, 
   problemId: { type: Schema.Types.ObjectId, ref: "Problem", required: true },
   code: { type: String, required: true },
   status: { type: String, enum: ["active", "inactive", "pending"], default: "active" },
