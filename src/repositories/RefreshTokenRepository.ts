@@ -9,8 +9,6 @@ class RefreshTokenRepository {
 
   async create(data: { userId: string; token: string }) {
     const hashedToken = this.hashToken(data.token);
-    // console.log("Storing refresh token: ", data.token);
-    // console.log("Hashed token: ", hashedToken);
     return await RefreshTokenModel.create({ userId: data.userId, token: hashedToken });
   }
 
@@ -19,9 +17,7 @@ class RefreshTokenRepository {
   }
 
   async findByToken(token: string) {
-    // console.log("Looking for token:", token);
     const hashedToken = this.hashToken(token);
-    // console.log("Hashed token:", hashedToken);
     return await RefreshTokenModel.findOne({ token: hashedToken });
   }
 

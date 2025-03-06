@@ -9,8 +9,6 @@ const testCaseSchema = new Schema<ITestCase>({
   status: { type: String, enum: ["active", "inactive", "pending"], default: "active" },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
-}, {
-  timestamps: true, // Automatically manage createdAt and updatedAt
-});
+}, { timestamps: true,});
 
 export default model<ITestCase>("TestCase", testCaseSchema);

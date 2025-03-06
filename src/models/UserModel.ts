@@ -10,7 +10,7 @@ const userSchema = new Schema<IUser>({
   role: { type: String, default: "user" },
   profileImage: { type: String, default: "" },
   joinedDate: { type: Date, default: Date.now },
-  problemsSolved: [{ type: Schema.Types.ObjectId, ref: "Problem" }], // Array of problem IDs
+  problemsSolved: [{ type: Schema.Types.ObjectId, ref: "Problem" }],
   rank: { type: Number, default: 0 },
   isBlocked: { type: Boolean, default: false },
   isPremium: { type: Boolean, default: false },

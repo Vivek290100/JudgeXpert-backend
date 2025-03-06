@@ -16,9 +16,7 @@ const problemSchema = new Schema<IProblem>({
   memory: { type: Number, default: 256 }, // Default memory limit (e.g., 256 KB)
   time: { type: Number, default: 1000 }, // Default time limit (e.g., 1 second)
   judge0TrackingId: { type: String, default: null }, // Optional for Judge0 integration
-}, {
-  timestamps: true, // Automatically manage createdAt and updatedAt
-});
+}, { timestamps: true,});
 
 const Problem = model<IProblem>("Problem", problemSchema);
 export default Problem;

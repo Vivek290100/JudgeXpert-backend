@@ -1,6 +1,5 @@
 import { Response } from "express";
 
-//  for response data
 interface ResponseData {
   success: boolean;
   message: string;
@@ -29,17 +28,17 @@ export const filterUserResponse = (user: any) => ({
   profileImage:
     user.profileImage ||
     "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?fit=crop&w=32&h=32",
-  role: user.role, // Ensure this is included
+  role: user.role,
   joinedDate: user.joinedDate,
   problemsSolved: user.problemsSolved ?? 0,
   rank: user.rank ?? 0,
-  isPremium: user.isPremium ?? false, // Add missing field
-  isGoogleAuth: user.isGoogleAuth ?? false, // Add missing field
+  isPremium: user.isPremium ?? false,
+  isGoogleAuth: user.isGoogleAuth ?? false,
   github: user.github || "",
   linkedin: user.linkedin || "",
 });
 
-// Helper to set authentication cookie
+// to set authentication cookie
 export const setAuthCookie = (
   res: Response,
   accessToken: string,
@@ -52,17 +51,9 @@ export const setAuthCookie = (
     maxAge: 59 * 60 * 1000,
   });
 
-//   if (refreshToken) {
-//     res.cookie("refreshToken", refreshToken, {
-//       httpOnly: true,
-//       secure: process.env.NODE_ENV === "production",
-//       sameSite: "strict",
-//       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-//     });
-//   }
 };
 
-// Helper to clear authentication cookie
+// to clear authentication cookie
 export const clearAuthCookie = (res: Response) => {
   res.clearCookie("accessToken", {
     httpOnly: true,

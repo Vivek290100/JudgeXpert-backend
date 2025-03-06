@@ -6,7 +6,6 @@ export const CONFIG = {
   PORT: process.env.PORT || 5000,
   NODE_ENV: process.env.NODE_ENV || "development",
   MONGO_URI: process.env.MONGO_URI || "",
-  JWT_SECRET: process.env.JWT_SECRET || "",
   ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET || "",
   REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET || "",
   BREVO_API_KEY: process.env.BREVO_API_KEY || "",
@@ -16,4 +15,10 @@ export const CONFIG = {
   S3_BUCKET_REGION: process.env.S3_BUCKET_REGION || "ap-southeast-2",
   S3_ACCESS_KEY: process.env.S3_ACCESS_KEY || "",
   S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY || "",
+
+  // Redis Config
+  REDIS_USERNAME: process.env.REDIS_USERNAME || "default",
+  REDIS_PASSWORD: process.env.REDIS_PASSWORD || "",
+  REDIS_HOST: process.env.REDIS_HOST || "",
+  REDIS_PORT: Number(process.env.REDIS_PORT) || 6379,
 };
