@@ -12,4 +12,5 @@ export interface IUserService {
     verifyForgotPasswordOtp(email: string, otp: string): Promise<void>;
     resetPassword(email: string, otp: string, newPassword: string): Promise<void>;
     updateProfile(data: {userId: string; fullName?: string; github?: string; linkedin?: string; profileImage?: Express.Multer.File;}): Promise<IUser>;
+    googleLogin(credential: string): Promise<{ user: IUser; accessToken: string; refreshToken: string }>;
   }

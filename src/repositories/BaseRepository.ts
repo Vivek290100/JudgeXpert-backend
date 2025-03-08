@@ -32,6 +32,3 @@ class BaseRepository<T extends Document> implements IBaseRepository<T> {
 }
 
 export default BaseRepository;
-
-
-

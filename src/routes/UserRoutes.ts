@@ -21,6 +21,8 @@ userRouter.post(UserRoutes.VERIFY_FORGOT_PASSWORD_OTP, userController.verifyForg
 
 userRouter.put(UserRoutes.UPDATE_PROFILE,authMiddleware, upload.single("profileImage"), userController.updateProfile.bind(userController));
 
+userRouter.post("/google-login", userController.googleLogin.bind(userController));
+
 userRouter.get(ProblemRoutes.GET_ALL_PROBLEMS, authMiddleware, problemController.getProblems.bind(problemController));
 userRouter.get(ProblemRoutes.GET_PROBLEM_BY_SLUG, authMiddleware, problemController.getProblemBySlug.bind(problemController));
 

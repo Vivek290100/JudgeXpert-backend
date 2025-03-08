@@ -179,14 +179,14 @@ class ProblemController {
   }
 
   async getProblems(req: AuthRequest, res: Response): Promise<void> {
-    const { page = "1", limit = "10", search = "", difficulty, solved, status } = req.query;
+    const { page = "1", limit = "10", search = "", difficulty, status } = req.query;
     const pageNum = parseInt(page as string, 10);
     const limitNum = parseInt(limit as string, 10);
-
+  
     if (isNaN(pageNum) || isNaN(limitNum) || pageNum < 1 || limitNum < 1) {
       throw new Error("Invalid page or limit parameters");
     }
-
+  
     const query: any = {};
     if (search) query.title = { $regex: search, $options: "i" };
     if (difficulty && ["EASY", "MEDIUM", "HARD"].includes(difficulty as string)) {
@@ -195,49 +195,39 @@ class ProblemController {
     if (status && ["premium", "free"].includes(status as string)) {
       query.status = status;
     }
-
+  
     const userId = req.user?.userId;
-
+  
     try {
-      let problems = await Problem.find(query)
+      // Fetch problems based on query
+      const problems = await Problem.find(query)
         .populate("defaultCodeIds")
         .populate("testCaseIds");
-
-      let total = problems.length;
-
-      let userProblemStatus: { problemId: string; solved: boolean }[] = [];
-      if (userId && (solved === "true" || solved === "false")) {
-        const user = (await User.findById(userId).select("solvedProblems")) as IUser | null;
-        const solvedProblems = user?.problemsSolved || [];
-        userProblemStatus = problems.map((problem) => ({
-          problemId: problem._id.toString(),
-          solved: solvedProblems.some((id) => id.toString() === problem._id.toString()),
-        }));
-
-        const isSolved = solved === "true";
-        problems = problems.filter((problem) =>
-          userProblemStatus.some((status) => status.problemId === problem._id.toString() && status.solved === isSolved)
-        );
-        total = problems.length;
+  
+      const total = problems.length;
+  
+      // Fetch the user's problemsSolved count if authenticated
+      let problemsSolvedCount = 0;
+      if (userId) {
+        const user = await User.findById(userId).select("problemsSolved");
+        if (!user) {
+          throw new Error("User not found");
+        }
+        problemsSolvedCount = user.problemsSolved || 0; // This is the count for the particular user
       }
-
+  
+      // Paginate the problems
       const paginatedProblems = problems.slice((pageNum - 1) * limitNum, pageNum * limitNum);
       const normalizedProblems = paginatedProblems.map((problem) => filterProblemResponse(problem));
-
-      if (userId && userProblemStatus.length > 0) {
-        userProblemStatus = userProblemStatus.filter((status) =>
-          normalizedProblems.some((problem) => problem.id === status.problemId)
-        );
-      }
-
+  
       sendResponse(res, {
         success: true,
         status: 200,
         message: "Problems fetched successfully",
         data: {
           problems: normalizedProblems,
-          userProblemStatus,
-          total,
+          problemsSolvedCount, // The count of problems solved by this user
+          total, // Total problems matching the query
           totalPages: Math.ceil(total / limitNum),
           currentPage: pageNum,
         },

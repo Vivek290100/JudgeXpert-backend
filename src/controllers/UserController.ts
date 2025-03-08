@@ -234,6 +234,36 @@ class UserController {
     }
   }
 
+  async googleLogin(req: Request, res: Response): Promise<void> {
+    console.log("its googleLogin controller ");
+    
+    try {
+      const { credential } = req.body;
+      if (!credential) {
+        throw new Error("Google credential is required");
+      }
+
+      const result = await this._userService.googleLogin(credential);
+      const { user, accessToken, refreshToken } = result;
+
+      setAuthCookie(res, accessToken, refreshToken);
+      const filteredUser = filterUserResponse(user);
+
+      sendResponse(res, {
+        success: true,
+        status: 200,
+        message: "Google login successful",
+        data: { user: filteredUser },
+      });
+    } catch (error: any) {
+      sendResponse(res, {
+        success: false,
+        status: error.status || 400,
+        message: error.message || "An error occurred during Google login",
+        data: null,
+      });
+    }
+  }
 
 }
 

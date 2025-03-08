@@ -19,13 +19,13 @@ export const AdminRoutes = {
   UNBLOCK_USER: "/users/:id/unblock",
   TOGGLE_BLOCK: "/block-user",
 
-   // Problem Management Routes
-   GET_ALL_PROBLEMS: "/problems",
-   CREATE_PROBLEM: "/problems",
-   GET_PROBLEM_BY_ID: "/problems/:id",
-   UPDATE_PROBLEM: "/problems/:id",
-   UPDATE_PROBLEM_STATUS: "/problems/:id/status",
-   PROCESS_SPECIFIC_PROBLEM: "/problems/single"
+  // Problem Management Routes
+  GET_ALL_PROBLEMS: "/problems",
+  CREATE_PROBLEM: "/problems",
+  GET_PROBLEM_BY_ID: "/problems/:id",
+  UPDATE_PROBLEM: "/problems/:id",
+  UPDATE_PROBLEM_STATUS: "/problems/:id/status",
+  PROCESS_SPECIFIC_PROBLEM: "/problems/single"
 };
 
 export const ProblemRoutes = {
