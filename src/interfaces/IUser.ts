@@ -2,18 +2,19 @@
 import { Document, Schema, Types } from "mongoose";
 
 export interface IUser extends Document {
-  _id: string;
+  _id: string | Types.ObjectId;
   userName: string;
   email: string;
-  password: string;
+  password?: string;
   fullName?: string;
-  role: string,
+  role: "user" | "admin";
   profileImage: string,
   joinedDate?: Date;
-  problemsSolved: [{equals(_id: string): unknown; type: Schema.Types.ObjectId, ref: "Problem"}],
+  problemsSolved: number;
   rank: number;
   isBlocked: boolean;
   isPremium: boolean;
+  googleId?: string;
   isGoogleAuth: boolean;
   github?: string;      
   linkedin?: string;

@@ -1,4 +1,3 @@
-// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\services\UserService.ts
 import { IUser } from "../interfaces/IUser";
 import { randomInt } from "crypto";
 import bcrypt from "bcrypt";
@@ -9,25 +8,27 @@ import UserRepository from "../repositories/UserRepository";
 import RefreshTokenRepository from "../repositories/RefreshTokenRepository";
 import { IUserService } from "../interfaces/IUserService";
 import { uploadToS3 } from "../utils/s3";
-
+import { CONFIG } from "../config/Config";
+import { OAuth2Client } from "google-auth-library";
 
 class UserService implements IUserService {
   private readonly OTP_EXPIRY_SECONDS = 300;
+  private googleClient = new OAuth2Client(CONFIG.GOOGLE_CLIENT_ID);
 
   constructor(
     private userRepository: UserRepository,
     private refreshTokenRepository: RefreshTokenRepository
   ) {}
 
-  private async generateAndSendOtp(email: string, purpose: 'signup' | 'reset' = 'signup'): Promise<string> {
+  private async generateAndSendOtp(email: string, purpose: "signup" | "reset" = "signup"): Promise<string> {
     const otp = randomInt(100000, 999999).toString();
     const otpKey = `${purpose}:otp:${email}`;
     console.log(otp, email);
-    
+
     await redisClient.set(otpKey, otp, { EX: this.OTP_EXPIRY_SECONDS });
     await sendOtpEmail({
       to: email,
-      subject: purpose === 'signup' ? "Verify your email" : "Reset your password",
+      subject: purpose === "signup" ? "Verify your email" : "Reset your password",
       otp,
       error: "",
     });
@@ -54,10 +55,9 @@ class UserService implements IUserService {
       problemsSolved: 0,
       rank: 0,
       isBlocked: false,
+      isPremium: false,
+      isGoogleAuth: false,
       joinedDate: new Date(),
-      solvedProblems: [],
-      submissions: [],
-      contestParticipations: [],
     };
 
     userData.password = await bcrypt.hash(data.password, 10);
@@ -70,7 +70,7 @@ class UserService implements IUserService {
 
   async verifyOtpAndCreateUser(email: string, otp: string): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
     const storedOtp = await redisClient.get(`signup:otp:${email}`);
-    
+
     if (!storedOtp) {
       throw new Error("OTP expired. Please request a new one.");
     }
@@ -86,17 +86,17 @@ class UserService implements IUserService {
     const userData = JSON.parse(userDataString);
     const user = await this.userRepository.create(userData);
 
-    // Clean up Redis only after successful creation
     await Promise.all([
       redisClient.del(`signup:otp:${email}`),
       redisClient.del(`tempUser:${email}`),
     ]);
 
-    const accessToken = JWTService.generateAccessToken(user._id.toString());
-    const refreshToken = JWTService.generateRefreshToken(user._id.toString());
+    const userIdString = user._id.toString();
+    const accessToken = JWTService.generateAccessToken(userIdString);
+    const refreshToken = JWTService.generateRefreshToken(userIdString);
 
     await this.refreshTokenRepository.create({
-      userId: user._id,
+      userId: userIdString,
       token: refreshToken,
     });
 
@@ -104,7 +104,7 @@ class UserService implements IUserService {
   }
 
   async refreshAccessToken(refreshToken: string): Promise<{ accessToken: string }> {
-    const decoded = JWTService.verifyToken(refreshToken, "refresh") as { userId: string } | null;
+    const decoded = JWTService.verifyToken(refreshToken, "refresh") as { userId: string };
     if (!decoded?.userId) {
       throw new Error("Invalid refresh token.");
     }
@@ -126,18 +126,19 @@ class UserService implements IUserService {
 
     if (user.isBlocked) {
       throw new Error("You are not allowed to sign in. Your account has been blocked.");
-  }
+    }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await bcrypt.compare(password, user.password || "");
     if (!isPasswordValid) {
       throw new Error("Invalid password");
     }
 
-    const accessToken = JWTService.generateAccessToken(user._id.toString());
-    const refreshToken = JWTService.generateRefreshToken(user._id.toString());
+    const userIdString = user._id.toString(); // Convert to string
+    const accessToken = JWTService.generateAccessToken(userIdString);
+    const refreshToken = JWTService.generateRefreshToken(userIdString);
 
     await this.refreshTokenRepository.create({
-      userId: user._id,
+      userId: userIdString, // Can keep as is if repository handles ObjectId
       token: refreshToken,
     });
 
@@ -157,7 +158,7 @@ class UserService implements IUserService {
     if (!userData) {
       throw new Error("Sign up session expired. Please start over.");
     }
-    await this.generateAndSendOtp(email, 'signup');
+    await this.generateAndSendOtp(email, "signup");
     return { message: "OTP resent successfully", email };
   }
 
@@ -166,21 +167,24 @@ class UserService implements IUserService {
     if (!user) {
       throw new Error("User with this email does not exist");
     }
-    await this.generateAndSendOtp(email, 'reset');
-    return { message: "Otp sent successfully fro reset password", email };
+    if (user.isGoogleAuth) {
+      throw new Error("Please use Google to manage your password");
+    }
+    await this.generateAndSendOtp(email, "reset");
+    return { message: "Otp sent successfully for reset password", email };
   }
 
   async verifyForgotPasswordOtp(email: string, otp: string): Promise<void> {
     const storedOtp = await redisClient.get(`reset:otp:${email}`);
-    
+
     if (!storedOtp) {
       throw new Error("OTP expired. Please request a new one.");
     }
     if (storedOtp !== otp) {
       throw new Error("Invalid OTP. Please enter the correct OTP.");
     }
-    
-    await redisClient.set(`reset:verified:${email}`, 'true', { EX: this.OTP_EXPIRY_SECONDS });
+
+    await redisClient.set(`reset:verified:${email}`, "true", { EX: this.OTP_EXPIRY_SECONDS });
     await redisClient.del(`reset:otp:${email}`);
   }
 
@@ -196,11 +200,10 @@ class UserService implements IUserService {
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await this.userRepository.update(user._id, { password: hashedPassword });
+    await this.userRepository.update(user._id.toString(), { password: hashedPassword });
 
     await redisClient.del(`reset:verified:${email}`);
   }
-
 
   async updateProfile(data: {
     userId: string;
@@ -216,10 +219,9 @@ class UserService implements IUserService {
     if (data.github) updateData.github = data.github;
     if (data.linkedin) updateData.linkedin = data.linkedin;
 
-    // Handle profile image upload to S3
     if (data.profileImage) {
       const s3Url = await uploadToS3(data.profileImage);
-      updateData.profileImage = s3Url; // Store the S3 URL
+      updateData.profileImage = s3Url;
     }
 
     const updatedUser = await this.userRepository.update(data.userId, updateData);
@@ -227,6 +229,61 @@ class UserService implements IUserService {
 
     return updatedUser;
   }
+
+  async googleLogin(credential: string): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
+    console.log("its googleLogin service ");
+    try {
+      // Verify Google token
+      const ticket = await this.googleClient.verifyIdToken({
+        idToken: credential,
+        audience: CONFIG.GOOGLE_CLIENT_ID,
+      });
+      
+      const payload = ticket.getPayload();
+      if (!payload?.email) {
+        throw new Error("Invalid Google token");
+      }
+
+      let user = await this.userRepository.findByQuery({ email: payload.email });
+      
+      // If user doesn't exist, create one
+      if (!user) {
+        const userData: Partial<IUser> = {
+          email: payload.email,
+          userName: payload.email.split("@")[0], 
+          fullName: payload.name || "",
+          role: "user",
+          profileImage: payload.picture || "",
+          isGoogleAuth: true,
+          joinedDate: new Date(),
+          problemsSolved: 0,
+          rank: 0,
+          isBlocked: false,
+          isPremium: false,
+        };
+
+        user = await this.userRepository.create(userData);
+      }
+
+      if (user.isBlocked) {
+        throw new Error("Your account is blocked. Please contact support.");
+      }
+
+      const userIdString = user._id.toString();
+      const accessToken = JWTService.generateAccessToken(userIdString);
+      const refreshToken = JWTService.generateRefreshToken(userIdString);
+
+      await this.refreshTokenRepository.create({
+        userId: userIdString,
+        token: refreshToken,
+      });
+
+      return { user, accessToken, refreshToken };
+    } catch (error) {
+      throw new Error(`Google login failed: ${error}`);
+    }
+  }
+
 }
 
 export default UserService;

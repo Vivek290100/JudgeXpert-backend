@@ -7,7 +7,6 @@
     "dev": "nodemon src/server.ts",
     "start": "node dist/app.js",
     "build": "tsc"
- 
   },
   "author": "Vivek",
   "license": "ISC",
@@ -15,7 +14,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.750.0",
     "@aws-sdk/s3-request-presigner": "^3.750.0",
-    "axios": "^1.7.9",
+    "axios": "^1.8.2",
     "bcrypt": "^5.1.1",
     "chalk": "^5.4.1",
     "cookie-parser": "^1.4.7",
@@ -26,6 +25,8 @@
     "express-mongo-sanitize": "^2.2.0",
     "express-rate-limit": "^7.5.0",
     "express-validator": "^7.2.1",
+    "google-auth-library": "^9.15.1",
+    "googleapis": "^146.0.0",
     "helmet": "^8.0.0",
     "ioredis": "^5.5.0",
     "jsonwebtoken": "^9.0.2",
