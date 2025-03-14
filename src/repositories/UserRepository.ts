@@ -3,8 +3,9 @@ import { FilterQuery } from "mongoose";
 import { IUser } from "../interfaces/IUser";
 import User from "../models/UserModel";
 import BaseRepository from "./BaseRepository";
+import { IUserRepository } from "../interfaces/IUserRepository";
 
-class UserRepository extends BaseRepository<IUser> {
+class UserRepository extends BaseRepository<IUser> implements IUserRepository {
   constructor() {
     super(User);
   }

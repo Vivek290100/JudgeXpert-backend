@@ -1,6 +1,8 @@
 // C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\utils\dependencies.ts
 import UserRepository from "../repositories/UserRepository";
+import { IUserRepository } from "../interfaces/IUserRepository";
 import RefreshTokenRepository from "../repositories/RefreshTokenRepository";
+import { IRefreshTokenRepository } from "../interfaces/IRefreshTokenRepository";
 import UserService from "../services/UserService";
 import UserController from "../controllers/UserController";
 
@@ -13,10 +15,11 @@ import ProblemRepository from "../repositories/ProblemRepository";
 import ProblemService from "../services/ProblemService";
 import ProblemController from "../controllers/ProblemController";
 import { IProblemService } from "../interfaces/IProblemService";
+import { IProblemRepository } from "../interfaces/IProblemRepository";
 
 // User Dependencies
-const userRepository = new UserRepository();
-const refreshTokenRepository = new RefreshTokenRepository();
+const userRepository: IUserRepository = new UserRepository();
+const refreshTokenRepository: IRefreshTokenRepository = new RefreshTokenRepository();
 
 const userService: IUserService = new UserService(userRepository, refreshTokenRepository);
 const userController = new UserController(userService);
@@ -26,7 +29,7 @@ const adminService: IAdminService = new AdminService(userRepository);
 const adminController = new AdminController(adminService);
 
 // Problem Dependencies
-const problemRepository = new ProblemRepository();
+const problemRepository: IProblemRepository = new ProblemRepository();
 const problemService: IProblemService = new ProblemService(problemRepository);
 const problemController = new ProblemController(problemService);
 
