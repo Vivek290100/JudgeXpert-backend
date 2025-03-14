@@ -3,8 +3,9 @@ import { FilterQuery, UpdateQuery } from "mongoose";
 import { IProblem } from "../interfaces/IProblem";
 import Problem from "../models/ProblemModel";
 import BaseRepository from "./BaseRepository";
+import { IProblemRepository } from "../interfaces/IProblemRepository";
 
-class ProblemRepository extends BaseRepository<IProblem> {
+class ProblemRepository extends BaseRepository<IProblem> implements IProblemRepository {
   findOne(arg0: { slug: string; }) {
     throw new Error("Method not implemented.");
   }

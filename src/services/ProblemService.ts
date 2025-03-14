@@ -1,7 +1,6 @@
 // C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\services\ProblemService.ts
 import { IProblem } from "../interfaces/IProblem";
 import { IProblemService } from "../interfaces/IProblemService";
-import ProblemRepository from "../repositories/ProblemRepository";
 import { ProblemDefinitionParser, FullProblemDefinitionParser } from "../utils/problemParsers";
 import fs from "fs/promises";
 import path from "path";
@@ -10,9 +9,10 @@ import TestCase from "../models/TestCaseModel";
 import DefaultCode from "../models/DefaultCodeModel";
 import { Types } from "mongoose";
 import { SUPPORTED_LANGUAGES, getLanguageId, validateLanguage } from "../config/Languages";
+import { IProblemRepository } from "../interfaces/IProblemRepository";
 
 class ProblemService implements IProblemService {
-  constructor(private problemRepository: ProblemRepository) {}
+  constructor(private problemRepository: IProblemRepository) {}
 
   async createProblemFromFiles(problemDir: string): Promise<IProblem | null> {
     const basePath = process.env.PROBLEM_BASE_PATH || path.join(__dirname, "../problems");

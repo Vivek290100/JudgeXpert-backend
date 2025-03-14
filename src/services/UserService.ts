@@ -4,20 +4,20 @@ import bcrypt from "bcrypt";
 import redisClient from "../utils/redis";
 import { sendOtpEmail } from "../utils/emailBrevo";
 import JWTService from "../utils/jwt";
-import UserRepository from "../repositories/UserRepository";
-import RefreshTokenRepository from "../repositories/RefreshTokenRepository";
 import { IUserService } from "../interfaces/IUserService";
 import { uploadToS3 } from "../utils/s3";
 import { CONFIG } from "../config/Config";
 import { OAuth2Client } from "google-auth-library";
+import { IUserRepository } from "../interfaces/IUserRepository";
+import { IRefreshTokenRepository } from "../interfaces/IRefreshTokenRepository";
 
 class UserService implements IUserService {
   private readonly OTP_EXPIRY_SECONDS = 300;
   private googleClient = new OAuth2Client(CONFIG.GOOGLE_CLIENT_ID);
 
   constructor(
-    private userRepository: UserRepository,
-    private refreshTokenRepository: RefreshTokenRepository
+    private userRepository: IUserRepository,
+    private refreshTokenRepository: IRefreshTokenRepository
   ) {}
 
   private async generateAndSendOtp(email: string, purpose: "signup" | "reset" = "signup"): Promise<string> {
@@ -133,12 +133,12 @@ class UserService implements IUserService {
       throw new Error("Invalid password");
     }
 
-    const userIdString = user._id.toString(); // Convert to string
+    const userIdString = user._id.toString();
     const accessToken = JWTService.generateAccessToken(userIdString);
     const refreshToken = JWTService.generateRefreshToken(userIdString);
 
     await this.refreshTokenRepository.create({
-      userId: userIdString, // Can keep as is if repository handles ObjectId
+      userId: userIdString,
       token: refreshToken,
     });
 
