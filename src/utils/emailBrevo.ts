@@ -12,9 +12,7 @@ interface EmailParams {
   error: string;
 }
 
-export const sendOtpEmail = async ({ to, subject, otp }: EmailParams) => {
-  console.log("its brevo");
-  
+export const sendOtpEmail = async ({ to, subject, otp }: EmailParams) => {  
   try {
     const response = await axios.post(
       BREVO_API_URL,

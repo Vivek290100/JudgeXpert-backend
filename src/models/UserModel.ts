@@ -1,4 +1,4 @@
-// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\models\UserModel.ts
+// Backend\src\models\UserModel.ts
 import { Schema, model } from "mongoose";
 import { IUser } from "../interfaces/IUser";
 

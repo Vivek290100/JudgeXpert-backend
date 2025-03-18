@@ -1,7 +1,7 @@
 // C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\utils\dependencies.ts
 import UserRepository from "../repositories/UserRepository";
-import { IUserRepository } from "../interfaces/IUserRepository";
 import RefreshTokenRepository from "../repositories/RefreshTokenRepository";
+import { IUserRepository } from "../interfaces/IUserRepository";
 import { IRefreshTokenRepository } from "../interfaces/IRefreshTokenRepository";
 import UserService from "../services/UserService";
 import UserController from "../controllers/UserController";

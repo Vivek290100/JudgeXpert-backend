@@ -10,11 +10,12 @@ export interface IProblem extends Document {
   slug: string;
   solvedCount: number;
   status: "premium" | "free";
+  isBlocked: Boolean;
   createdAt: Date;
   updatedAt: Date;
-  testCaseIds: Types.ObjectId[]; // References to TestCase documents
-  defaultCodeIds: Types.ObjectId[]; // References to DefaultCode documents
-  memory: number; // Maximum memory limit (in KB or MB, e.g., for Judge0)
-  time: number; // Maximum time limit (in milliseconds or seconds, e.g., for Judge0)
-  judge0TrackingId: string | null; // Optional tracking ID for Judge0 submissions (for future use)
+  testCaseIds: Types.ObjectId[];
+  defaultCodeIds: Types.ObjectId[];
+  memory: number; 
+  time: number; 
+  judge0TrackingId: string | null;
 }

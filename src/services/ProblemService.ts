@@ -1,15 +1,15 @@
-// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\services\ProblemService.ts
+// Backend\src\services\ProblemService.ts
 import { IProblem } from "../interfaces/IProblem";
 import { IProblemService } from "../interfaces/IProblemService";
+import { IProblemRepository } from "../interfaces/IProblemRepository";
 import { ProblemDefinitionParser, FullProblemDefinitionParser } from "../utils/problemParsers";
 import fs from "fs/promises";
 import path from "path";
-import { FilterQuery, UpdateQuery } from "mongoose";
 import TestCase from "../models/TestCaseModel";
 import DefaultCode from "../models/DefaultCodeModel";
 import { Types } from "mongoose";
+import { FilterQuery, UpdateQuery } from "mongoose";
 import { SUPPORTED_LANGUAGES, getLanguageId, validateLanguage } from "../config/Languages";
-import { IProblemRepository } from "../interfaces/IProblemRepository";
 
 class ProblemService implements IProblemService {
   constructor(private problemRepository: IProblemRepository) {}
@@ -172,6 +172,15 @@ class ProblemService implements IProblemService {
       { $set: { testCaseIds, defaultCodeIds } },
       { new: true }
     );
+
+    // Delete the problem directory
+  // const basePath = process.env.PROBLEM_BASE_PATH || path.join(__dirname, "../problems");
+  // const fullProblemDir = path.join(basePath, problemDir);
+  try {
+    await fs.rm(fullProblemDir, { recursive: true });
+  } catch (error) {
+    console.error(`Failed to delete problem directory ${problemDir}:`, error);
+  }
   
     return problem;
   }
@@ -189,6 +198,7 @@ class ProblemService implements IProblemService {
     limit: number,
     query: FilterQuery<IProblem> = {}
   ): Promise<{ problems: IProblem[]; total: number }> {
+      query.isBlocked = { $ne: true };
     try {
       return await this.problemRepository.findPaginated(page, limit, query);
     } catch (error) {
@@ -208,8 +218,45 @@ class ProblemService implements IProblemService {
     return this.problemRepository.update(id, { status });
   }
 
-  async updateProblem(id: string, updates: Partial<IProblem>): Promise<IProblem | null> {
+  // async updateProblem(id: string, updates: Partial<IProblem>): Promise<IProblem | null> {
+  //   return this.problemRepository.update(id, updates);
+  // }
+
+  async blockProblem(id: string): Promise<IProblem | null> {
+    return this.updateProblem(id, { isBlocked: true });
+  }
+
+  async unblockProblem(id: string): Promise<IProblem | null> {
+    return this.updateProblem(id, { isBlocked: false });
+  }
+
+  async updateProblem(id: string, updates: UpdateQuery<IProblem>): Promise<IProblem | null> {
+    const validDifficulties = ["EASY", "MEDIUM", "HARD"];
+    if (updates.difficulty && !validDifficulties.includes(updates.difficulty as string)) {
+      throw new Error("Invalid difficulty value");
+    }
+    if (updates.isBlocked !== undefined && typeof updates.isBlocked !== "boolean") {
+      throw new Error("isBlocked must be a boolean");
+    }
     return this.problemRepository.update(id, updates);
+  }
+
+  async listServerProblems(): Promise<{ problemDir: string; existsInDatabase: boolean }[]> {
+    const basePath = process.env.PROBLEM_BASE_PATH || path.join(__dirname, "../problems");
+    const problemDirs = await fs.readdir(basePath, { withFileTypes: true })
+      .then((dents) => dents
+        .filter((d) => d.isDirectory())
+        .map((d) => d.name)
+      );
+  
+    const slugs = problemDirs;
+    const existingSlugs = await this.problemRepository.find({ slug: { $in: slugs } })
+      .then((problems) => problems.map((p) => p.slug));
+  
+    return slugs.map((slug) => ({
+      problemDir: slug,
+      existsInDatabase: existingSlugs.includes(slug),
+    }));
   }
 }
 

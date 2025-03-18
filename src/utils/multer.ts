@@ -3,7 +3,7 @@ import multer from "multer";
 // Use memory storage to avoid writing files to disk
 const storage = multer.memoryStorage();
 
-//accept only images
+// only images
 const fileFilter = (
   req: Express.Request,
   file: Express.Multer.File,
@@ -17,11 +17,11 @@ const fileFilter = (
   }
 };
 
-// Multer configuration
+// Multer
 export const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, //5MB
+    fileSize: 5 * 1024 * 1024, //5mb
   },
 });

@@ -76,7 +76,6 @@ class AdminController {
   async blockUser(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.params.id;
-      console.log("useriddddd",userId);
       
       const updatedUser = await this.adminService.blockUser(userId);
       const adminUser = {

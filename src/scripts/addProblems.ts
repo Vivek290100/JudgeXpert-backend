@@ -5,7 +5,6 @@ import { generateBoilerplateForProblem } from "./generateBoilerplate";
 
 async function main(problemDir: string): Promise<void> {
   try {
-    // Connect to the database
     await connectDB();
 
     // Initialize the problem repository and service
@@ -29,7 +28,7 @@ async function main(problemDir: string): Promise<void> {
   }
 }
 
-// Execute the script with a problemDir provided (e.g., via command-line argument)
+// Execute the script with a problemDir provided
 const problemDir = process.argv[2]; // Example: node addProblems.ts "two-sum"
 if (!problemDir) {
   console.error("Please provide a problem directory (slug) as an argument.");

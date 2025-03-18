@@ -1,14 +1,13 @@
 // C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\controllers\ProblemController.ts
 import { Request, Response } from "express";
 import { sendResponse } from "../utils/responseUtils";
-import { IProblemService } from "../interfaces/IProblemService"; // Import the interface
+import { IProblemService } from "../interfaces/IProblemService";
 import fs from "fs/promises";
 import path from "path";
 import { generateBoilerplateForProblem } from "../scripts/generateBoilerplate";
 import Problem from "../models/ProblemModel";
 import { AuthRequest } from "../middlewares/authMiddleware";
 import User from "../models/UserModel";
-import { IUser } from "../interfaces/IUser";
 
 export const filterProblemResponse = (problem: any) => ({
   id: problem._id.toString(),
@@ -21,6 +20,7 @@ export const filterProblemResponse = (problem: any) => ({
   description: problem.description || "",
   defaultCodeIds: problem.defaultCodeIds || [],
   testCaseIds: problem.testCaseIds || [],
+  isBlocked: problem.isBlocked,
 });
 
 class ProblemController {
@@ -81,12 +81,9 @@ class ProblemController {
     }
   }
 
-  async getProblemBySlug(req: Request, res: Response): Promise<void> {
-    console.log("its getProblemBySlug");
-    
+  async getProblemBySlug(req: Request, res: Response): Promise<void> {    
     try {
       const { slug } = req.params;
-      console.log("444444444",slug);
       
       if (!slug || typeof slug !== "string") throw new Error("Invalid slug");
 
@@ -199,24 +196,22 @@ class ProblemController {
     const userId = req.user?.userId;
   
     try {
-      // Fetch problems based on query
       const problems = await Problem.find(query)
         .populate("defaultCodeIds")
         .populate("testCaseIds");
+        
   
       const total = problems.length;
   
-      // Fetch the user's problemsSolved count if authenticated
       let problemsSolvedCount = 0;
       if (userId) {
         const user = await User.findById(userId).select("problemsSolved");
         if (!user) {
           throw new Error("User not found");
         }
-        problemsSolvedCount = user.problemsSolved || 0; // This is the count for the particular user
+        problemsSolvedCount = user.problemsSolved || 0;
       }
   
-      // Paginate the problems
       const paginatedProblems = problems.slice((pageNum - 1) * limitNum, pageNum * limitNum);
       const normalizedProblems = paginatedProblems.map((problem) => filterProblemResponse(problem));
   
@@ -226,8 +221,8 @@ class ProblemController {
         message: "Problems fetched successfully",
         data: {
           problems: normalizedProblems,
-          problemsSolvedCount, // The count of problems solved by this user
-          total, // Total problems matching the query
+          problemsSolvedCount,
+          total,
           totalPages: Math.ceil(total / limitNum),
           currentPage: pageNum,
         },
@@ -326,6 +321,84 @@ class ProblemController {
       });
     }
   }
+
+  async unlinkProblem(req: Request, res: Response): Promise<void> {
+    const { problemDir } = req.params;
+    if (!problemDir || typeof problemDir !== "string") {
+      throw new Error("Invalid problemDir");
+    }
+  
+    const basePath = process.env.PROBLEM_BASE_PATH || path.join(__dirname, "../problems");
+    const fullProblemDir = path.join(basePath, problemDir);
+  
+    try {
+      await fs.rm(fullProblemDir, { recursive: true });
+      sendResponse(res, {
+        success: true,
+        status: 200,
+        message: `Problem directory ${problemDir} unlinked successfully`,
+        data: null,
+      });
+    } catch (error: any) {
+      sendResponse(res, {
+        success: false,
+        status: error.status || 500,
+        message: `Failed to unlink problem directory ${problemDir}: ${error.message || "Unknown error" }`,
+        data: null,
+      });
+    }
+  }
+
+
+  async blockProblem(req: Request, res: Response): Promise<void> {
+    console.log("Received block request for ID:", req.params.id); // Add this log
+    try {
+      const { id } = req.params;
+      if (!id || typeof id !== "string") throw new Error("Invalid problem ID");
+  
+      const problem = await this.problemService.blockProblem(id);
+      if (!problem) throw new Error("Problem not found");
+  
+      sendResponse(res, {
+        success: true,
+        status: 200,
+        message: "Problem blocked successfully",
+        data: { problem: filterProblemResponse(problem) },
+      });
+    } catch (error: any) {
+      sendResponse(res, {
+        success: false,
+        status: error.status || 404,
+        message: error.message || "An error occurred while blocking the problem",
+        data: null,
+      });
+    }
+  }
+  
+  async unblockProblem(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      if (!id || typeof id !== "string") throw new Error("Invalid problem ID");
+  
+      const problem = await this.problemService.unblockProblem(id);
+      if (!problem) throw new Error("Problem not found");
+  
+      sendResponse(res, {
+        success: true,
+        status: 200,
+        message: "Problem unblocked successfully",
+        data: { problem: filterProblemResponse(problem) },
+      });
+    } catch (error: any) {
+      sendResponse(res, {
+        success: false,
+        status: error.status || 404,
+        message: error.message || "An error occurred while unblocking the problem",
+        data: null,
+      });
+    }
+  }
+
 }
 
 export default ProblemController;

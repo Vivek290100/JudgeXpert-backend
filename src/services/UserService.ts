@@ -2,8 +2,8 @@ import { IUser } from "../interfaces/IUser";
 import { randomInt } from "crypto";
 import bcrypt from "bcrypt";
 import redisClient from "../utils/redis";
-import { sendOtpEmail } from "../utils/emailBrevo";
 import JWTService from "../utils/jwt";
+import { sendOtpEmail } from "../utils/emailBrevo";
 import { IUserService } from "../interfaces/IUserService";
 import { uploadToS3 } from "../utils/s3";
 import { CONFIG } from "../config/Config";
@@ -212,7 +212,6 @@ class UserService implements IUserService {
     linkedin?: string;
     profileImage?: Express.Multer.File;
   }): Promise<IUser> {
-    console.log("Updating user profile in service");
 
     const updateData: Partial<IUser> = {};
     if (data.fullName) updateData.fullName = data.fullName;
@@ -231,7 +230,6 @@ class UserService implements IUserService {
   }
 
   async googleLogin(credential: string): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
-    console.log("its googleLogin service ");
     try {
       // Verify Google token
       const ticket = await this.googleClient.verifyIdToken({

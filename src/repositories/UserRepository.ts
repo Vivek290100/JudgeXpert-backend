@@ -1,4 +1,4 @@
-// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\repositories\UserRepository.ts
+// Backend\src\repositories\UserRepository.ts
 import { FilterQuery } from "mongoose";
 import { IUser } from "../interfaces/IUser";
 import User from "../models/UserModel";
