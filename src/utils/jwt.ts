@@ -4,7 +4,7 @@ import { CONFIG } from "../config/Config";
 
 class JWTService {
   static generateAccessToken(userId: string): string {
-    return jwt.sign({ userId }, CONFIG.ACCESS_TOKEN_SECRET, { expiresIn: "59m" });
+    return jwt.sign({ userId }, CONFIG.ACCESS_TOKEN_SECRET, { expiresIn: "1h" });
   }
 
   static generateRefreshToken(userId: string): string {

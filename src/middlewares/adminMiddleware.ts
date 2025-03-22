@@ -5,14 +5,13 @@ import { CONFIG } from "../config/Config";
 import { Dependencies } from "../utils/dependencies";
 import { sendResponse } from "../utils/responseUtils";
 
-interface AuthRequest extends Request {
+export interface AuthRequest extends Request {
   user?: { userId: string; role: string };
 }
 
 const adminMiddleware = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-  console.log("aaaaaaaaaaaaaaaaaaaaaa");
-  
   const token = req.cookies?.accessToken;
+  console.log("Middleware - Cookies received:", req.cookies);
   if (!token) {
     sendResponse(res, {
       success: false,
@@ -24,10 +23,6 @@ const adminMiddleware = async (req: AuthRequest, res: Response, next: NextFuncti
 
   try {
     const decoded = jwt.verify(token, CONFIG.ACCESS_TOKEN_SECRET as string) as { userId: string };
-    if (!decoded.userId) {
-      throw new Error("Invalid token payload");
-    }
-
     const user = await Dependencies.userRepository.findById(decoded.userId);
     if (!user) {
       sendResponse(res, {
@@ -51,8 +46,8 @@ const adminMiddleware = async (req: AuthRequest, res: Response, next: NextFuncti
   } catch (error) {
     sendResponse(res, {
       success: false,
-      message: "Forbidden: Invalid or expired token",
-      status: 403,
+      message: "Unauthorized: Token expired or invalid",
+      status: 401,
     });
     return;
   }

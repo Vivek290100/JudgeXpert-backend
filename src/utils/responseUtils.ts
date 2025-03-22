@@ -1,4 +1,5 @@
 import { Response } from "express";
+import { AppError, StatusCode } from "./errors";
 
 interface ResponseData {
   success: boolean;
@@ -18,6 +19,24 @@ export const sendResponse = (
   });
 };
 
+
+export const handleError = (res: Response, error: AppError | Error) => {
+  if (error instanceof AppError) {
+    sendResponse(res, {
+      success: false,
+      message: error.message,
+      status: error.statusCode,
+      data: error.details,
+    });
+  } else {
+    sendResponse(res, {
+      success: false,
+      message: "Internal Server Error",
+      status: StatusCode.INTERNAL_SERVER_ERROR,
+      data: null,
+    });
+  }
+};
 
 
 export const filterUserResponse = (user: any) => ({
@@ -39,18 +58,15 @@ export const filterUserResponse = (user: any) => ({
 });
 
 // to set authentication cookie
-export const setAuthCookie = (
-  res: Response,
-  accessToken: string,
-  refreshToken?: string
-) => {
+export const setAuthCookie = (res: Response, accessToken: string): void => {
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 59 * 60 * 1000,
+    maxAge: 24 * 60 * 60 * 1000, // 1 day
+    sameSite: "lax",
+    path: "/",
   });
-
+  // console.log("Cookie set:", accessToken);
 };
 
 // to clear authentication cookie
@@ -61,10 +77,5 @@ export const clearAuthCookie = (res: Response) => {
     sameSite: "strict",
     path: "/",
   });
-  res.clearCookie("refreshToken", {
-    httpOnly: true,
-    secure: true,
-    sameSite: "strict",
-    path: "/",
-  });
+
 };

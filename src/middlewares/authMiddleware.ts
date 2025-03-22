@@ -7,19 +7,21 @@ export interface AuthRequest extends Request {
   user?: { userId: string };
 }
 
-const authMiddleware = (req: AuthRequest, res: Response,next: NextFunction): void => {
+const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction): void => {
   const token = req.cookies?.accessToken;
+  console.log("Middleware - accessToken from cookie:", token); 
   if (!token) {
-    res.status(401).json({ success: false, message: "Unauthorized: No token provided" }); 
-    return;}
+    res.status(401).json({ success: false, message: "Unauthorized: No token provided" });
+    return;
+  }
 
   try {
-    const decoded = jwt.verify(token,CONFIG.ACCESS_TOKEN_SECRET as string) as { userId: string };
-    
-    req.user = { userId: decoded.userId };
+    const decoded = jwt.verify(token, CONFIG.ACCESS_TOKEN_SECRET as string, {
+      ignoreExpiration: true
+    }) as { userId: string };    req.user = { userId: decoded.userId };
     next();
   } catch (error) {
-    res.status(403).json({ success: false, message: "Forbidden: Invalid token" });
+    res.status(401).json({ success: false, message: "Unauthorized: Token expired or invalid" });
     return;
   }
 };

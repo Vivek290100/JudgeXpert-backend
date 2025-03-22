@@ -9,7 +9,11 @@ import TestCase from "../models/TestCaseModel";
 import DefaultCode from "../models/DefaultCodeModel";
 import { Types } from "mongoose";
 import { FilterQuery, UpdateQuery } from "mongoose";
-import { SUPPORTED_LANGUAGES, getLanguageId, validateLanguage } from "../config/Languages";
+import { SUPPORTED_LANGUAGES, getLanguageConfig, getLanguageId, validateLanguage } from "../config/Languages";
+import axios from "axios";
+import { ExecutionResult } from "../interfaces/IExecution";
+import { TestCaseResult } from "../interfaces/ITestCaseResult";
+import { BadRequestError, NotFoundError } from "../utils/errors";
 
 class ProblemService implements IProblemService {
   constructor(private problemRepository: IProblemRepository) {}
@@ -32,7 +36,7 @@ class ProblemService implements IProblemService {
       fs.access(inputsDir),
       fs.access(outputsDir),
     ]).catch(() => {
-      throw new Error(`Invalid problem directory structure: ${problemDir}`);
+      throw new BadRequestError(`Invalid problem directory structure: ${problemDir}`);
     });
   
     const [description, structure] = await Promise.all([
@@ -103,7 +107,7 @@ class ProblemService implements IProblemService {
     ]);
   
     if (inputFiles.length !== outputFiles.length) {
-      throw new Error("Mismatch between input and output test case files");
+      throw new BadRequestError("Mismatch between input and output test case files");
     }
   
     for (let i = 0; i < inputFiles.length; i++) {
@@ -132,7 +136,7 @@ class ProblemService implements IProblemService {
   
     const problem = await this.problemRepository.upsertProblem(query, update, options);
     if (!problem?._id) {
-      throw new Error("Failed to create or update problem: no document returned");
+      throw new NotFoundError("Failed to create or update problem: no document returned");
     }
   
     const testCaseIds: Types.ObjectId[] = [];
@@ -152,7 +156,7 @@ class ProblemService implements IProblemService {
     for (const code of defaultCode) {
       const languageId = getLanguageId(code.language);
       if (!languageId) {
-        throw new Error(`Unsupported language: ${code.language}`);
+        throw new BadRequestError(`Unsupported language: ${code.language}`);
       }
       const languageName = SUPPORTED_LANGUAGES.find((lang) => lang.id === languageId)?.name || "Unknown";
   
@@ -213,7 +217,7 @@ class ProblemService implements IProblemService {
   async updateProblemStatus(id: string, status: "premium" | "free"): Promise<IProblem | null> {
     const validStatuses: Array<"premium" | "free"> = ["premium", "free"];
     if (!validStatuses.includes(status)) {
-      throw new Error(`Invalid status value: ${status}. Must be "premium" or "free".`);
+      throw new BadRequestError(`Invalid status value: ${status}. Must be "premium" or "free".`);
     }
     return this.problemRepository.update(id, { status });
   }
@@ -233,10 +237,10 @@ class ProblemService implements IProblemService {
   async updateProblem(id: string, updates: UpdateQuery<IProblem>): Promise<IProblem | null> {
     const validDifficulties = ["EASY", "MEDIUM", "HARD"];
     if (updates.difficulty && !validDifficulties.includes(updates.difficulty as string)) {
-      throw new Error("Invalid difficulty value");
+      throw new BadRequestError("Invalid difficulty value");
     }
     if (updates.isBlocked !== undefined && typeof updates.isBlocked !== "boolean") {
-      throw new Error("isBlocked must be a boolean");
+      throw new BadRequestError("isBlocked must be a boolean");
     }
     return this.problemRepository.update(id, updates);
   }
@@ -258,6 +262,69 @@ class ProblemService implements IProblemService {
       existsInDatabase: existingSlugs.includes(slug),
     }));
   }
+
+  async executeCode(
+    problemId: string,
+    language: string,
+    code: string
+  ): Promise<{ results: TestCaseResult[]; passed: boolean }> {
+    const problem = await this.problemRepository.findById(problemId);
+    if (!problem) throw new NotFoundError("Problem not found");
+  
+    const langConfig = getLanguageConfig(language);
+    if (!langConfig) throw new BadRequestError(`Unsupported language: ${language}`);
+  
+    const testCases = await TestCase.find({ problemId: problem._id, status: "active" });
+    if (!testCases.length) throw new NotFoundError("No active test cases found");
+  
+    const PISTON_API_URL = process.env.PISTON_API_URL || "https://emkc.org/api/v2/piston/execute";
+    const results: TestCaseResult[] = [];
+  
+    for (const testCase of testCases) {
+      try {
+        const executableCode = langConfig.wrapper(code, testCase.input);
+        console.log(`Executing code for ${language} (mapped to ${langConfig.name}):\n${executableCode}`);
+  
+        const response = await axios.post<ExecutionResult>(PISTON_API_URL, {
+          language: langConfig.name, // Use canonical name for Piston
+          version: "*",
+          files: [{ name: `main.${langConfig.ext}`, content: executableCode }],
+          stdin: testCase.input,
+        });
+  
+        console.log(`Piston Response for test case ${testCase.index}:`, response.data);
+  
+        const { stdout, stderr, code: exitCode } = response.data.run;
+        const output = stdout.trim();
+        const expected = testCase.output.trim();
+        const passed = output === expected && exitCode === 0;
+  
+        results.push({
+          testCaseIndex: testCase.index,
+          input: testCase.input,
+          expectedOutput: expected,
+          actualOutput: output,
+          stderr: stderr.trim(),
+          passed,
+        });
+      } catch (error) {
+        console.error(`Error executing test case ${testCase.index}:`, error);
+        results.push({
+          testCaseIndex: testCase.index,
+          input: testCase.input,
+          expectedOutput: testCase.output,
+          actualOutput: "",
+          stderr: "Execution failed",
+          passed: false,
+        });
+      }
+    }
+  
+    const allPassed = results.every((r) => r.passed);
+    return { results, passed: allPassed };
+  }
+
+
 }
 
 export default ProblemService;

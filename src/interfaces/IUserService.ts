@@ -4,7 +4,7 @@ import { IUser } from "./IUser";
 export interface IUserService {
     initiateSignUp(data: Partial<IUser>): Promise<{ message: string; email: string }>;
     verifyOtpAndCreateUser(email: string, otp: string): Promise<{ user: IUser; accessToken: string; refreshToken: string }>;
-    refreshAccessToken(refreshToken: string): Promise<{ accessToken: string }>;
+    refreshAccessToken(userId: string): Promise<{ accessToken: string; refreshToken: string }>;
     loginUser(email: string, password: string): Promise<{ user: IUser; accessToken: string; refreshToken: string }>;
     logout(userId: string): Promise<void>;
     resendOtp(email: string): Promise<{ message: string; email: string }>;

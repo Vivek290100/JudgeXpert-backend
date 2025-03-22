@@ -1,64 +1,43 @@
-import { IRefreshToken, IRefreshTokenRepository } from "../interfaces/IRefreshTokenRepository";
-import RefreshTokenModel from "../models/RefreshTokenModel";
-import crypto from "crypto";
-import mongoose from "mongoose";
+// Backend\src\repositories\RefreshTokenRepository.ts
+import redisClient from "../utils/redis";
+import { IRefreshTokenRepository } from "../interfaces/IRefreshTokenRepository";
 
 class RefreshTokenRepository implements IRefreshTokenRepository {
-  private hashToken(token: string): string {
-    return crypto.createHash("sha256").update(token).digest("hex");
+  private readonly TOKEN_EXPIRY_SECONDS = 30 * 24 * 60 * 60; // 30 days
+  private readonly PREFIX = "refreshToken:";
+
+  private getUserKey(userId: string): string {
+    return `${this.PREFIX}user:${userId}`;
   }
 
-  private toIRefreshToken(doc: any): IRefreshToken {
-    if (!doc) return null as any;
-    return {
-      ...doc.toObject(),
-      userId: doc.userId.toString(),
-      _id: doc._id.toString(),
-    };
+  async create(data: { userId: string; token: string }): Promise<void> {
+    const userKey = this.getUserKey(data.userId);
+    // Store the original token (not hashed) for verification
+    await redisClient.set(userKey, data.token, { EX: this.TOKEN_EXPIRY_SECONDS });
   }
 
-  async create(data: { userId: string; token: string }): Promise<IRefreshToken> {
-    const hashedToken = this.hashToken(data.token);
-    const doc = await RefreshTokenModel.create({
-      userId: new mongoose.Types.ObjectId(data.userId),
-      token: hashedToken,
-    });
-    return this.toIRefreshToken(doc);
+  async findByUserId(userId: string): Promise<string | null> {
+    return await redisClient.get(this.getUserKey(userId));
   }
 
-  async findByUserId(userId: string): Promise<IRefreshToken | null> {
-    const doc = await RefreshTokenModel.findOne({
-      userId: new mongoose.Types.ObjectId(userId),
-    });
-    return this.toIRefreshToken(doc);
+  async findByToken(token: string): Promise<string | null> {
+    // Optional: If you still want to support token-to-user lookup, you'd need a separate mapping
+    // For simplicity, we'll skip this since it's not used in the current flow
+    throw new Error("findByToken not implemented in this flow");
   }
 
-  async findByToken(token: string): Promise<IRefreshToken | null> {
-    const hashedToken = this.hashToken(token);
-    const doc = await RefreshTokenModel.findOne({ token: hashedToken });
-    return this.toIRefreshToken(doc);
+  async updateToken(userId: string, newToken: string): Promise<void> {
+    const userKey = this.getUserKey(userId);
+    await redisClient.set(userKey, newToken, { EX: this.TOKEN_EXPIRY_SECONDS });
   }
 
-  async updateToken(userId: string, newToken: string): Promise<IRefreshToken | null> {
-    const hashedToken = this.hashToken(newToken);
-    const doc = await RefreshTokenModel.findOneAndUpdate(
-      { userId: new mongoose.Types.ObjectId(userId) },
-      { token: hashedToken },
-      { new: true }
-    );
-    return this.toIRefreshToken(doc);
+  async deleteByUserId(userId: string): Promise<void> {
+    await redisClient.del(this.getUserKey(userId));
   }
 
-  async deleteByUserId(userId: string): Promise<any> {
-    return await RefreshTokenModel.deleteMany({
-      userId: new mongoose.Types.ObjectId(userId),
-    });
-  }
-
-  async deleteByToken(token: string): Promise<IRefreshToken | null> {
-    const hashedToken = this.hashToken(token);
-    const doc = await RefreshTokenModel.findOneAndDelete({ token: hashedToken });
-    return this.toIRefreshToken(doc);
+  async deleteByToken(token: string): Promise<void> {
+    // Optional: If you add a token-to-user mapping, implement this
+    throw new Error("deleteByToken not implemented in this flow");
   }
 }
 
