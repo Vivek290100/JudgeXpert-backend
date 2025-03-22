@@ -1,45 +1,44 @@
-// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\utils\emailBrevo.ts
+// utils/emailBrevo.ts
 import axios from "axios";
-import { CONFIG } from "../config/Config";
+import { IEmailService } from "../interfaces/utilInterfaces/IEmailService";
 
-const BREVO_API_KEY = CONFIG.BREVO_API_KEY;
-const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
+class BrevoEmailService implements IEmailService {
+  private readonly apiKey: string;
+  private readonly apiUrl: string = "https://api.brevo.com/v3/smtp/email";
 
-interface EmailParams {
-  to: string;
-  subject: string;
-  otp: string;
-  error: string;
+  constructor(apiKey: string) {
+    this.apiKey = apiKey;
+  }
+
+  async sendOtpEmail({ to, subject, otp }: { to: string; subject: string; otp: string }): Promise<any> {
+    try {
+      const response = await axios.post(
+        this.apiUrl,
+        {
+          sender: {
+            name: "JudgeXpert",
+            email: "vivekv290100@gmail.com",
+          },
+          to: [{ email: to }],
+          subject,
+          templateId: 2,
+          params: {
+            otp,
+          },
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "api-key": this.apiKey,
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error sending email:", error);
+      throw new Error("Failed to send OTP email");
+    }
+  }
 }
 
-export const sendOtpEmail = async ({ to, subject, otp }: EmailParams) => {  
-  try {
-    const response = await axios.post(
-      BREVO_API_URL,
-      {
-        sender: {
-          name: "JudgeXpert",
-          email: "vivekv290100@gmail.com",
-        },
-        to: [{ email: to }],
-        subject: subject,
-        templateId: 2, 
-        params: {
-          otp: otp,
-        },
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          "api-key": BREVO_API_KEY!,
-        },
-      }
-    );
-
-    // console.log("0000000000", response.data);
-    return response.data;
-  } catch (error) {
-    console.error("Error sending email:", error);
-    throw new Error("Failed to send OTP email");
-  }
-};
+export default BrevoEmailService;

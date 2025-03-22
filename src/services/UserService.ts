@@ -2,8 +2,6 @@ import { IUser } from "../interfaces/IUser";
 import { randomInt } from "crypto";
 import bcrypt from "bcrypt";
 import redisClient from "../utils/redis";
-import JWTService from "../utils/jwt";
-import { sendOtpEmail } from "../utils/emailBrevo";
 import { IUserService } from "../interfaces/IUserService";
 import { uploadToS3 } from "../utils/s3";
 import { CONFIG } from "../config/Config";
@@ -11,6 +9,9 @@ import { OAuth2Client } from "google-auth-library";
 import { IUserRepository } from "../interfaces/IUserRepository";
 import { IRefreshTokenRepository } from "../interfaces/IRefreshTokenRepository";
 import { BadRequestError, ForbiddenError, NotFoundError, UnauthorizedError } from "../utils/errors";
+import { IJWTService } from "../interfaces/utilInterfaces/IJWTService";
+import { IEmailService } from "../interfaces/utilInterfaces/IEmailService";
+import { IRedisService } from "../interfaces/utilInterfaces/IRedisService";
 
 class UserService implements IUserService {
   private readonly OTP_EXPIRY_SECONDS = 300;
@@ -18,7 +19,10 @@ class UserService implements IUserService {
 
   constructor(
     private userRepository: IUserRepository,
-    private refreshTokenRepository: IRefreshTokenRepository
+    private refreshTokenRepository: IRefreshTokenRepository,
+    private jwtService: IJWTService,
+    private emailService: IEmailService,
+    private redisService: IRedisService
   ) {}
 
   private async generateAndSendOtp(email: string, purpose: "signup" | "reset" = "signup"): Promise<string> {
@@ -26,10 +30,11 @@ class UserService implements IUserService {
     const otpKey = `${purpose}:otp:${email}`;
     console.log(otp, email);
 
-    await redisClient.set(otpKey, otp, { EX: this.OTP_EXPIRY_SECONDS });
-    await sendOtpEmail({
+    await this.redisService.set(otpKey, otp, { EX: this.OTP_EXPIRY_SECONDS });
+    await this.emailService.sendOtpEmail({
       to: email,
-      subject: purpose === "signup" ? "Verify your email" : "Reset your password",
+      subject:
+        purpose === "signup" ? "Verify your email" : "Reset your password",
       otp,
       error: "",
     });
@@ -62,7 +67,7 @@ class UserService implements IUserService {
     };
 
     userData.password = await bcrypt.hash(data.password, 10);
-    await redisClient.set(`tempUser:${data.email}`, JSON.stringify(userData), {
+    await this.redisService.set(`tempUser:${data.email}`, JSON.stringify(userData), {
       EX: this.OTP_EXPIRY_SECONDS,
     });
     await this.generateAndSendOtp(data.email);
@@ -70,7 +75,7 @@ class UserService implements IUserService {
   }
 
   async verifyOtpAndCreateUser(email: string, otp: string): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
-    const storedOtp = await redisClient.get(`signup:otp:${email}`);
+    const storedOtp = await this.redisService.get(`signup:otp:${email}`);
 
     if (!storedOtp) {
       throw new BadRequestError("OTP expired. Please request a new one.");
@@ -79,7 +84,7 @@ class UserService implements IUserService {
       throw new BadRequestError("Invalid OTP. Please enter the correct OTP.");
     }
 
-    const userDataString = await redisClient.get(`tempUser:${email}`);
+    const userDataString = await this.redisService.get(`tempUser:${email}`);
     if (!userDataString) {
       throw new BadRequestError("Sign up session expired. Please try again.");    }
 
@@ -87,13 +92,13 @@ class UserService implements IUserService {
     const user = await this.userRepository.create(userData);
 
     await Promise.all([
-      redisClient.del(`signup:otp:${email}`),
-      redisClient.del(`tempUser:${email}`),
+      this.redisService.del(`signup:otp:${email}`),
+      this.redisService.del(`tempUser:${email}`),
     ]);
 
     const userIdString = user._id.toString();
-    const accessToken = JWTService.generateAccessToken(userIdString);
-    const refreshToken = JWTService.generateRefreshToken(userIdString);
+    const accessToken = this.jwtService.generateAccessToken(userIdString);
+    const refreshToken = this.jwtService.generateRefreshToken(userIdString);
 
     await this.refreshTokenRepository.create({
       userId: userIdString,
@@ -110,14 +115,14 @@ class UserService implements IUserService {
   
     // Verify the stored refresh token (optional, since it’s in Redis)
     try {
-      JWTService.verifyToken(storedToken, "refresh");
+      this.jwtService.verifyToken(storedToken, "refresh");
     } catch (error) {
       await this.refreshTokenRepository.deleteByUserId(userId);
       throw new UnauthorizedError("Refresh token is invalid or expired. Please log in again.");    }
   
     // Generate new tokens
-    const newAccessToken = JWTService.generateAccessToken(userId);
-    const newRefreshToken = JWTService.generateRefreshToken(userId);
+    const newAccessToken = this.jwtService.generateAccessToken(userId);
+    const newRefreshToken = this.jwtService.generateRefreshToken(userId);
   
     // Update the refresh token in Redis
     await this.refreshTokenRepository.updateToken(userId, newRefreshToken);
@@ -142,8 +147,8 @@ class UserService implements IUserService {
       throw new BadRequestError("Invalid password");    }
 
     const userIdString = user._id.toString();
-    const accessToken = JWTService.generateAccessToken(userIdString);
-    const refreshToken = JWTService.generateRefreshToken(userIdString);
+    const accessToken = this.jwtService.generateAccessToken(userIdString);
+    const refreshToken = this.jwtService.generateRefreshToken(userIdString);
 
     await this.refreshTokenRepository.create({
       userId: userIdString,
@@ -163,7 +168,7 @@ class UserService implements IUserService {
   }
 
   async resendOtp(email: string): Promise<{ message: string; email: string }> {
-    const userData = await redisClient.get(`tempUser:${email}`);
+    const userData = await this.redisService.get(`tempUser:${email}`);
     if (!userData) {
       throw new BadRequestError("Sign up session expired. Please start over.");    }
     await this.generateAndSendOtp(email, "signup");
@@ -181,7 +186,7 @@ class UserService implements IUserService {
   }
 
   async verifyForgotPasswordOtp(email: string, otp: string): Promise<void> {
-    const storedOtp = await redisClient.get(`reset:otp:${email}`);
+    const storedOtp = await this.redisService.get(`reset:otp:${email}`);
 
     if (!storedOtp) {
       throw new BadRequestError("OTP expired. Please request a new one.");
@@ -190,12 +195,12 @@ class UserService implements IUserService {
       throw new BadRequestError("Invalid OTP. Please enter the correct OTP.");
     }
 
-    await redisClient.set(`reset:verified:${email}`, "true", { EX: this.OTP_EXPIRY_SECONDS });
-    await redisClient.del(`reset:otp:${email}`);
+    await this.redisService.set(`reset:verified:${email}`, "true", { EX: this.OTP_EXPIRY_SECONDS });
+    await this.redisService.del(`reset:otp:${email}`);
   }
 
   async resetPassword(email: string, otp: string, newPassword: string): Promise<void> {
-    const isVerified = await redisClient.get(`reset:verified:${email}`);
+    const isVerified = await this.redisService.get(`reset:verified:${email}`);
     if (!isVerified) {
       throw new BadRequestError("OTP not verified. Please verify OTP first.");
     }
@@ -208,7 +213,7 @@ class UserService implements IUserService {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await this.userRepository.update(user._id.toString(), { password: hashedPassword });
 
-    await redisClient.del(`reset:verified:${email}`);
+    await this.redisService.del(`reset:verified:${email}`);
   }
 
   async updateProfile(data: {
@@ -274,8 +279,8 @@ class UserService implements IUserService {
       }
 
       const userIdString = user._id.toString();
-      const accessToken = JWTService.generateAccessToken(userIdString);
-      const refreshToken = JWTService.generateRefreshToken(userIdString);
+      const accessToken = this.jwtService.generateAccessToken(userIdString);
+      const refreshToken = this.jwtService.generateRefreshToken(userIdString);
 
       await this.refreshTokenRepository.create({
         userId: userIdString,
