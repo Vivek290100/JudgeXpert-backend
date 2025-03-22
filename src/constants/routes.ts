@@ -34,6 +34,8 @@ export const AdminRoutes = {
 export const ProblemRoutes = {
   GET_ALL_PROBLEMS: "/problems",
   GET_PROBLEM_BY_SLUG: "/problems/:slug",
+
+  EXECUTE_CODE: "/execute",
 } as const;
 
 

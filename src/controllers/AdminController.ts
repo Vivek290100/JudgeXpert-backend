@@ -1,6 +1,8 @@
+// AdminController.ts
 import { Request, Response } from "express";
-import { sendResponse } from "../utils/responseUtils";
+import { handleError, sendResponse } from "../utils/responseUtils";
 import { IAdminService } from "../interfaces/IAdminService";
+import { StatusCode, CommonErrors } from "../utils/errors";
 
 class AdminController {
   constructor(private adminService: IAdminService) {}
@@ -24,7 +26,7 @@ class AdminController {
 
       sendResponse(res, {
         success: true,
-        status: 200,
+        status: StatusCode.SUCCESS,
         message: "Users fetched successfully",
         data: {
           users: adminUsers,
@@ -34,19 +36,22 @@ class AdminController {
         },
       });
     } catch (error: any) {
-      sendResponse(res, {
-        success: false,
-        status: 500,
-        message: error.message || "Failed to fetch users",
-        data: null,
-      });
+      handleError(res, error);
     }
   }
 
   async getUserById(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.params.id;
+      if (!userId) {
+        throw CommonErrors.USER_ID_REQUIRED();
+      }
+
       const user = await this.adminService.getUserById(userId);
+      if (!user) {
+        throw CommonErrors.USER_NOT_FOUND();
+      }
+
       const adminUser = {
         id: user._id.toString(),
         email: user.email,
@@ -59,24 +64,22 @@ class AdminController {
 
       sendResponse(res, {
         success: true,
-        status: 200,
+        status: StatusCode.SUCCESS,
         message: "User fetched successfully",
         data: { user: adminUser },
       });
     } catch (error: any) {
-      sendResponse(res, {
-        success: false,
-        status: 404,
-        message: error.message || "User not found",
-        data: null,
-      });
+      handleError(res, error);
     }
   }
 
   async blockUser(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.params.id;
-      
+      if (!userId) {
+        throw CommonErrors.USER_ID_REQUIRED();
+      }
+
       const updatedUser = await this.adminService.blockUser(userId);
       const adminUser = {
         id: updatedUser._id.toString(),
@@ -90,23 +93,22 @@ class AdminController {
 
       sendResponse(res, {
         success: true,
-        status: 200,
+        status: StatusCode.SUCCESS,
         message: "User blocked successfully",
         data: { user: adminUser },
       });
     } catch (error: any) {
-      sendResponse(res, {
-        success: false,
-        status: 400,
-        message: error.message || "Failed to block userrr",
-        data: null,
-      });
+      handleError(res, error);
     }
   }
 
   async unblockUser(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.params.id;
+      if (!userId) {
+        throw CommonErrors.USER_ID_REQUIRED();
+      }
+
       const updatedUser = await this.adminService.unblockUser(userId);
       const adminUser = {
         id: updatedUser._id.toString(),
@@ -120,30 +122,26 @@ class AdminController {
 
       sendResponse(res, {
         success: true,
-        status: 200,
+        status: StatusCode.SUCCESS,
         message: "User unblocked successfully",
         data: { user: adminUser },
       });
     } catch (error: any) {
-      sendResponse(res, {
-        success: false,
-        status: 400,
-        message: error.message || "Failed to unblock user",
-        data: null,
-      });
+      handleError(res, error);
     }
   }
-
 
   async toggleBlockUser(req: Request, res: Response): Promise<void> {
     try {
       const { userId, isBlocked } = req.body;
       if (!userId || typeof isBlocked !== "boolean") {
-        throw new Error("Invalid request payload");
+        throw CommonErrors.INVALID_REQUEST_PAYLOAD("userId and isBlocked");
       }
+
       const updatedUser = isBlocked
         ? await this.adminService.blockUser(userId)
         : await this.adminService.unblockUser(userId);
+
       const adminUser = {
         id: updatedUser._id.toString(),
         email: updatedUser.email,
@@ -153,19 +151,15 @@ class AdminController {
         isBlocked: updatedUser.isBlocked,
         joinedDate: updatedUser.joinedDate?.toISOString() ?? new Date().toISOString(),
       };
+
       sendResponse(res, {
         success: true,
-        status: 200,
+        status: StatusCode.SUCCESS,
         message: `User ${isBlocked ? "blocked" : "unblocked"} successfully`,
         data: { user: adminUser },
       });
     } catch (error: any) {
-      sendResponse(res, {
-        success: false,
-        status: 400,
-        message: error.message || "Failed to update user block status",
-        data: null,
-      });
+      handleError(res, error);
     }
   }
 }

@@ -20,11 +20,12 @@ userRouter
   .post(UserRoutes.RESET_PASSWORD, userController.resetPassword.bind(userController))
   .post(UserRoutes.VERIFY_FORGOT_PASSWORD_OTP, userController.verifyForgotPasswordOtp.bind(userController))
   .put(UserRoutes.UPDATE_PROFILE, authMiddleware, upload.single("profileImage"), userController.updateProfile.bind(userController))
-  .post(UserRoutes.GOOGLE_LOGIN, userController.googleLogin.bind(userController));
+  .post(UserRoutes.GOOGLE_LOGIN, userController.googleLogin.bind(userController))
+  .post("/auth/refresh-token", userController.refreshToken.bind(userController));
 
 // Problem
 userRouter
   .get(ProblemRoutes.GET_ALL_PROBLEMS, authMiddleware, problemController.getProblems.bind(problemController))
-  .get(ProblemRoutes.GET_PROBLEM_BY_SLUG, authMiddleware, problemController.getProblemBySlug.bind(problemController));
-
+  .get(ProblemRoutes.GET_PROBLEM_BY_SLUG, authMiddleware, problemController.getProblemBySlug.bind(problemController))
+  .post(ProblemRoutes.EXECUTE_CODE, authMiddleware,problemController.executeCode.bind(problemController));
 export default userRouter;

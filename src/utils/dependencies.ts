@@ -16,12 +16,28 @@ import ProblemService from "../services/ProblemService";
 import ProblemController from "../controllers/ProblemController";
 import { IProblemService } from "../interfaces/IProblemService";
 import { IProblemRepository } from "../interfaces/IProblemRepository";
+import { CONFIG } from "../config/Config";
+import { IJWTService } from "../interfaces/utilInterfaces/IJWTService";
+import JWTService from "./jwt";
+import BrevoEmailService from "./emailBrevo";
+import { IEmailService } from "../interfaces/utilInterfaces/IEmailService";
+import { IRedisService } from "../interfaces/utilInterfaces/IRedisService";
+import RedisService from "./redis";
 
 // User Dependencies
 const userRepository: IUserRepository = new UserRepository();
-const refreshTokenRepository: IRefreshTokenRepository = new RefreshTokenRepository();
+const redisService: IRedisService = new RedisService(
+    CONFIG.REDIS_USERNAME,
+    CONFIG.REDIS_PASSWORD,
+    CONFIG.REDIS_HOST,
+    CONFIG.REDIS_PORT
+  );
+const refreshTokenRepository: IRefreshTokenRepository = new RefreshTokenRepository(redisService);
 
-const userService: IUserService = new UserService(userRepository, refreshTokenRepository);
+const jwtService: IJWTService = new JWTService(CONFIG.ACCESS_TOKEN_SECRET,CONFIG.REFRESH_TOKEN_SECRET);
+const emailService: IEmailService = new BrevoEmailService(CONFIG.BREVO_API_KEY);
+
+const userService: IUserService = new UserService(userRepository, refreshTokenRepository, jwtService, emailService, redisService);
 const userController = new UserController(userService);
 
 // Admin Dependencies
@@ -34,17 +50,19 @@ const problemService: IProblemService = new ProblemService(problemRepository);
 const problemController = new ProblemController(problemService);
 
 export const Dependencies = {
-    userRepository,
-    refreshTokenRepository,
-    userService,
-    userController,
-    adminService,
-    adminController,
+  userRepository,
+  refreshTokenRepository,
+  jwtService,
+  emailService,
+  redisService,
+  userService,
+  userController,
+  adminService,
+  adminController,
 
-    problemRepository,
-    problemService,
-    problemController,
-
+  problemRepository,
+  problemService,
+  problemController,
 };
 
 export default Dependencies;

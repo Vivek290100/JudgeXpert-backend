@@ -12,4 +12,9 @@ export interface IProblemService {
   updateProblem(id: string, updates: UpdateQuery<IProblem>): Promise<IProblem | null>;
   blockProblem(id: string): Promise<IProblem | null>; 
   unblockProblem(id: string): Promise<IProblem | null>;
+  executeCode(
+    problemId: string,
+    language: string,
+    code: string
+  ): Promise<{ results: any[]; passed: boolean }>;
 }

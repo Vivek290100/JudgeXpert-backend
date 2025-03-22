@@ -1,18 +1,23 @@
-// Backend\src\utils\jwt.ts
+// utils/jwt.ts
 import jwt from "jsonwebtoken";
-import { CONFIG } from "../config/Config";
+import { IJWTService } from "../interfaces/utilInterfaces/IJWTService";
 
-class JWTService {
-  static generateAccessToken(userId: string): string {
-    return jwt.sign({ userId }, CONFIG.ACCESS_TOKEN_SECRET, { expiresIn: "59m" });
+class JWTService implements IJWTService {
+  constructor(
+    private accessTokenSecret: string,
+    private refreshTokenSecret: string
+  ) {}
+
+  generateAccessToken(userId: string): string {
+    return jwt.sign({ userId }, this.accessTokenSecret, { expiresIn: "1h" });
   }
 
-  static generateRefreshToken(userId: string): string {
-    return jwt.sign({ userId }, CONFIG.REFRESH_TOKEN_SECRET, { expiresIn: "30d" });
+  generateRefreshToken(userId: string): string {
+    return jwt.sign({ userId }, this.refreshTokenSecret, { expiresIn: "30d" });
   }
 
-  static verifyToken(token: string, type: "access" | "refresh"): { userId: string } {
-    const secret = type === "access" ? CONFIG.ACCESS_TOKEN_SECRET : CONFIG.REFRESH_TOKEN_SECRET;
+  verifyToken(token: string, type: "access" | "refresh"): { userId: string } {
+    const secret = type === "access" ? this.accessTokenSecret : this.refreshTokenSecret;
     if (!secret) {
       throw new Error("Secret not found for token type.");
     }
