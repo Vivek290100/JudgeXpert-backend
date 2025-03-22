@@ -9,6 +9,7 @@ export const UserRoutes = {
   VERIFY_FORGOT_PASSWORD_OTP: "/verify-forgot-password-otp",
   RESET_PASSWORD: "/reset-password",
   UPDATE_PROFILE: "/update-profile",
+  GOOGLE_LOGIN: "/google-login",
  
 } as const;
 
@@ -19,13 +20,15 @@ export const AdminRoutes = {
   UNBLOCK_USER: "/users/:id/unblock",
   TOGGLE_BLOCK: "/block-user",
 
-  // Problem Management Routes
+  // Problem 
   GET_ALL_PROBLEMS: "/problems",
   CREATE_PROBLEM: "/problems",
   GET_PROBLEM_BY_ID: "/problems/:id",
   UPDATE_PROBLEM: "/problems/:id",
   UPDATE_PROBLEM_STATUS: "/problems/:id/status",
-  PROCESS_SPECIFIC_PROBLEM: "/problems/single"
+  PROCESS_SPECIFIC_PROBLEM: "/problems/single",
+  BLOCK_PROBLEM: "/problems/:id/block",
+  UNBLOCK_PROBLEM: "/problems/:id/unblock",
 };
 
 export const ProblemRoutes = {

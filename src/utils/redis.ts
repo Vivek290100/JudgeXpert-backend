@@ -1,4 +1,4 @@
-// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\utils\redis.ts
+// Backend\src\utils\redis.ts
 import { createClient } from "redis";
 import { CONFIG } from "../config/Config";
 

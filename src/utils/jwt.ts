@@ -1,4 +1,4 @@
-// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\utils\jwt.ts
+// Backend\src\utils\jwt.ts
 import jwt from "jsonwebtoken";
 import { CONFIG } from "../config/Config";
 

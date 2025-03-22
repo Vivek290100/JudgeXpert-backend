@@ -1,4 +1,4 @@
-// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\interfaces\IUser.ts
+// Backend\src\interfaces\IUser.ts
 import { Document, Schema, Types } from "mongoose";
 
 export interface IUser extends Document {

@@ -10,4 +10,6 @@ export interface IProblemService {
   getProblemsPaginated( page: number,limit: number, query?: FilterQuery<IProblem>): Promise<{ problems: IProblem[]; total: number }>;
   updateProblemStatus(id: string, status: "premium" | "free"): Promise<IProblem | null>;
   updateProblem(id: string, updates: UpdateQuery<IProblem>): Promise<IProblem | null>;
+  blockProblem(id: string): Promise<IProblem | null>; 
+  unblockProblem(id: string): Promise<IProblem | null>;
 }

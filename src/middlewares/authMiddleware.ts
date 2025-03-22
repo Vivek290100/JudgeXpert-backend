@@ -1,4 +1,4 @@
-// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\middlewares\authMiddleware.ts
+// Backend\src\middlewares\authMiddleware.ts
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { CONFIG } from "../config/Config";
@@ -15,7 +15,6 @@ const authMiddleware = (req: AuthRequest, res: Response,next: NextFunction): voi
 
   try {
     const decoded = jwt.verify(token,CONFIG.ACCESS_TOKEN_SECRET as string) as { userId: string };
-    // console.log("decodeddecodeddecoded",decoded);
     
     req.user = { userId: decoded.userId };
     next();

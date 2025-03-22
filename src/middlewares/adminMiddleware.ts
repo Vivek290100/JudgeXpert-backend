@@ -1,4 +1,4 @@
-// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\middlewares\adminMiddleware.ts
+// Backend\src\middlewares\adminMiddleware.ts
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { CONFIG } from "../config/Config";

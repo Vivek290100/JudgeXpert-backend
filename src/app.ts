@@ -1,4 +1,4 @@
-// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\app.ts
+// Backend\src\app.ts
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";

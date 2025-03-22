@@ -1,4 +1,4 @@
-// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\interfaces\IUserService.ts
+// Backend\src\interfaces\IUserService.ts
 import { IUser } from "./IUser";
 
 export interface IUserService {

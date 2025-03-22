@@ -196,27 +196,22 @@ class UserController {
   }
 
   async updateProfile(req: AuthRequest, res: Response): Promise<void> {
-    console.log("Updating profile in controller");
     try {
       const userId = req.user?.userId;
       if (!userId) throw new Error("Unauthorized: No user ID found");
 
       const { fullName, github, linkedin } = req.body;
-      const profileImage = req.file; // Multer provides the file object
+      const profileImage = req.file;
 
       const updatedUser = await this._userService.updateProfile({
         userId,
         fullName,
         github,
         linkedin,
-        profileImage, // Pass the file object directly
+        profileImage, 
       });
       
-
-      console.log("Raw Updated User:", updatedUser); 
-    const filteredUser = filterUserResponse(updatedUser);
-    console.log("Filtered User Response:", filteredUser);
-      
+    // const filteredUser = filterUserResponse(updatedUser);
 
       sendResponse(res, {
         success: true,
@@ -235,7 +230,6 @@ class UserController {
   }
 
   async googleLogin(req: Request, res: Response): Promise<void> {
-    console.log("its googleLogin controller ");
     
     try {
       const { credential } = req.body;

@@ -39,7 +39,6 @@ class ProblemRepository extends BaseRepository<IProblem> implements IProblemRepo
         .exec(),
       this.model.countDocuments(query).exec(),
     ]);
-    console.log("555555555",problems,total);
     
     return { problems, total };
   }

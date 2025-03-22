@@ -1,4 +1,4 @@
-// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\services\AdminService.ts
+// Backend\src\services\AdminService.ts
 import { IAdminService } from "../interfaces/IAdminService";
 import { IUser } from "../interfaces/IUser";
 import { IUserRepository } from "../interfaces/IUserRepository";
