@@ -1,18 +1,16 @@
-// Backend\src\config\Languages.ts
-// Backend\src\config\Languages.ts
 export interface LanguageConfig {
-  name: string;           // Canonical name (e.g., "javascript")
-  aliases?: string[];     // Alternative names (e.g., ["js"])
-  id: number;             // Piston language ID
-  ext: string;            // File extension
+  name: string;         
+  aliases?: string[];    
+  id: number;             // Piston lang ID
+  ext: string;        
   wrapper: (code: string, input: string) => string; // Function to wrap user code
 }
 
 export const SUPPORTED_LANGUAGES: LanguageConfig[] = [
   {
     name: "javascript",
-    aliases: ["js"], // Add alias
-    id: 63, // Node.js 12.14.0
+    aliases: ["js"], 
+    id: 63, // Node 12.14.0
     ext: "js",
     wrapper: (code, input) => {
       const functionNameMatch = code.match(/function\s+(\w+)\s*\(/);

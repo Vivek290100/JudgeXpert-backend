@@ -1,5 +1,5 @@
 // Backend\src\repositories\RefreshTokenRepository.ts
-import { IRefreshTokenRepository } from "../interfaces/IRefreshTokenRepository";
+import { IRefreshTokenRepository } from "../interfaces/repositoryInterfaces/IRefreshTokenRepository";
 import { IRedisService } from "../interfaces/utilInterfaces/IRedisService";
 
 class RefreshTokenRepository implements IRefreshTokenRepository {

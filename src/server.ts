@@ -1,4 +1,3 @@
-//Backend\src\server.ts
 console.log("Starting server...");
 import app from "./app";
 import dotenv from "dotenv";

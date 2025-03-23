@@ -17,5 +17,4 @@ export interface IProblem extends Document {
   defaultCodeIds: Types.ObjectId[];
   memory: number; 
   time: number; 
-  judge0TrackingId: string | null;
 }

@@ -1,5 +1,6 @@
 import { Response } from "express";
-import { AppError, StatusCode } from "./errors";
+import { AppError } from "./errors";
+import { StatusCode } from "./statusCode";
 
 interface ResponseData {
   success: boolean;
@@ -57,7 +58,6 @@ export const filterUserResponse = (user: any) => ({
   linkedin: user.linkedin || "",
 });
 
-// to set authentication cookie
 export const setAuthCookie = (res: Response, accessToken: string): void => {
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
@@ -66,10 +66,8 @@ export const setAuthCookie = (res: Response, accessToken: string): void => {
     sameSite: "lax",
     path: "/",
   });
-  // console.log("Cookie set:", accessToken);
 };
 
-// to clear authentication cookie
 export const clearAuthCookie = (res: Response) => {
   res.clearCookie("accessToken", {
     httpOnly: true,

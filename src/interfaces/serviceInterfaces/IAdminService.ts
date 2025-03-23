@@ -1,4 +1,4 @@
-import { IUser } from "./IUser";
+import { IUser } from "../../types/IUser";
 
 export interface IAdminService {
     getAllUsers(page: number, limit: number): Promise<{ users: IUser[], total: number }>;

@@ -1,6 +1,6 @@
 // C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\repositories\BaseRepository.ts
 import { Model, Document, FilterQuery } from "mongoose";
-import {IBaseRepository} from "../interfaces/IBaseRepositories"
+import {IBaseRepository} from "../interfaces/baseRepositoryInterface/IBaseRepositories"
 
 class BaseRepository<T extends Document> implements IBaseRepository<T> {
   protected model: Model<T>;

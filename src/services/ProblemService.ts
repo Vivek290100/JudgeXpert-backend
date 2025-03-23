@@ -1,7 +1,6 @@
-// Backend\src\services\ProblemService.ts
-import { IProblem } from "../interfaces/IProblem";
-import { IProblemService } from "../interfaces/IProblemService";
-import { IProblemRepository } from "../interfaces/IProblemRepository";
+import { IProblem } from "../types/IProblem";
+import { IProblemService } from "../interfaces/serviceInterfaces/IProblemService";
+import { IProblemRepository } from "../interfaces/repositoryInterfaces/IProblemRepository";
 import { ProblemDefinitionParser, FullProblemDefinitionParser } from "../utils/problemParsers";
 import fs from "fs/promises";
 import path from "path";
@@ -9,11 +8,11 @@ import TestCase from "../models/TestCaseModel";
 import DefaultCode from "../models/DefaultCodeModel";
 import { Types } from "mongoose";
 import { FilterQuery, UpdateQuery } from "mongoose";
-import { SUPPORTED_LANGUAGES, getLanguageConfig, getLanguageId, validateLanguage } from "../config/Languages";
+import { SUPPORTED_LANGUAGES, getLanguageConfig, getLanguageId, validateLanguage } from "../utils/languages";
 import axios from "axios";
-import { ExecutionResult } from "../interfaces/IExecution";
-import { TestCaseResult } from "../interfaces/ITestCaseResult";
-import { BadRequestError, NotFoundError } from "../utils/errors";
+import { ExecutionResult } from "../types/IExecution";
+import { TestCaseResult } from "../types/ITestCaseResult";
+import { BadRequestError, ErrorMessages, NotFoundError } from "../utils/errors";
 
 class ProblemService implements IProblemService {
   constructor(private problemRepository: IProblemRepository) {}
@@ -29,14 +28,13 @@ class ProblemService implements IProblemService {
     const boilerplateDir = path.join(fullProblemDir, "boilerplate");
     const boilerplateFullDir = path.join(fullProblemDir, "boilerplate-full");
   
-    // Validate directory structure
     await Promise.all([
       fs.access(structurePath),
       fs.access(problemPath),
       fs.access(inputsDir),
       fs.access(outputsDir),
     ]).catch(() => {
-      throw new BadRequestError(`Invalid problem directory structure: ${problemDir}`);
+      throw new BadRequestError(ErrorMessages.INVALID_PROBLEM_DIR_STRUCTURE(problemDir));
     });
   
     const [description, structure] = await Promise.all([
@@ -48,6 +46,7 @@ class ProblemService implements IProblemService {
     parser.parse(structure);
   
     const languages = SUPPORTED_LANGUAGES.map((lang) => lang.name);
+    console.log("Supported languages:", languages);
     let defaultCode: { language: string; code: string }[] = [];
     let fullDefaultCode: { language: string; code: string }[] = [];
   
@@ -63,7 +62,7 @@ class ProblemService implements IProblemService {
   
     for (const [index, lang] of languages.entries()) {
       if (!validateLanguage(lang)) {
-        console.warn(`Unsupported language: ${lang}, skipping...`);
+        console.warn(ErrorMessages.UNSUPPORTED_LANGUAGE(lang));
         continue;
       }
   
@@ -74,6 +73,7 @@ class ProblemService implements IProblemService {
       } catch (error) {
         console.log(`Partial boilerplate for ${lang} not found, generating...`);
         const code = parser.generateCode(lang);
+        console.log(`Generated code for ${lang}:`, code); 
         await fs.writeFile(filePath, code);
         defaultCode.push({ language: lang, code });
       }
@@ -83,7 +83,7 @@ class ProblemService implements IProblemService {
     fullParser.parse(structure);
     for (const [index, lang] of languages.entries()) {
       if (!validateLanguage(lang)) {
-        console.warn(`Unsupported language: ${lang}, skipping...`);
+        console.warn(ErrorMessages.UNSUPPORTED_LANGUAGE(lang));
         continue;
       }
   
@@ -107,7 +107,7 @@ class ProblemService implements IProblemService {
     ]);
   
     if (inputFiles.length !== outputFiles.length) {
-      throw new BadRequestError("Mismatch between input and output test case files");
+      throw new BadRequestError(ErrorMessages.TEST_CASE_MISMATCH);
     }
   
     for (let i = 0; i < inputFiles.length; i++) {
@@ -126,7 +126,6 @@ class ProblemService implements IProblemService {
       status: "free",
       memory: 256,
       time: 1000,
-      judge0TrackingId: null,
       updatedAt: new Date(),
     };
   
@@ -136,7 +135,7 @@ class ProblemService implements IProblemService {
   
     const problem = await this.problemRepository.upsertProblem(query, update, options);
     if (!problem?._id) {
-      throw new NotFoundError("Failed to create or update problem: no document returned");
+      throw new NotFoundError(ErrorMessages.FAILED_TO_PROCESS_PROBLEM);
     }
   
     const testCaseIds: Types.ObjectId[] = [];
@@ -156,7 +155,7 @@ class ProblemService implements IProblemService {
     for (const code of defaultCode) {
       const languageId = getLanguageId(code.language);
       if (!languageId) {
-        throw new BadRequestError(`Unsupported language: ${code.language}`);
+        throw new BadRequestError(ErrorMessages.UNSUPPORTED_LANGUAGE(code.language));
       }
       const languageName = SUPPORTED_LANGUAGES.find((lang) => lang.id === languageId)?.name || "Unknown";
   
@@ -177,14 +176,11 @@ class ProblemService implements IProblemService {
       { new: true }
     );
 
-    // Delete the problem directory
-  // const basePath = process.env.PROBLEM_BASE_PATH || path.join(__dirname, "../problems");
-  // const fullProblemDir = path.join(basePath, problemDir);
-  try {
-    await fs.rm(fullProblemDir, { recursive: true });
-  } catch (error) {
-    console.error(`Failed to delete problem directory ${problemDir}:`, error);
-  }
+    try {
+      await fs.rm(fullProblemDir, { recursive: true });
+    } catch (error) {
+      console.error(`Failed to delete problem directory ${problemDir}:`, error);
+    }
   
     return problem;
   }
@@ -202,7 +198,7 @@ class ProblemService implements IProblemService {
     limit: number,
     query: FilterQuery<IProblem> = {}
   ): Promise<{ problems: IProblem[]; total: number }> {
-      query.isBlocked = { $ne: true };
+    query.isBlocked = { $ne: true };
     try {
       return await this.problemRepository.findPaginated(page, limit, query);
     } catch (error) {
@@ -217,14 +213,10 @@ class ProblemService implements IProblemService {
   async updateProblemStatus(id: string, status: "premium" | "free"): Promise<IProblem | null> {
     const validStatuses: Array<"premium" | "free"> = ["premium", "free"];
     if (!validStatuses.includes(status)) {
-      throw new BadRequestError(`Invalid status value: ${status}. Must be "premium" or "free".`);
+      throw new BadRequestError(ErrorMessages.INVALID_STATUS);
     }
     return this.problemRepository.update(id, { status });
   }
-
-  // async updateProblem(id: string, updates: Partial<IProblem>): Promise<IProblem | null> {
-  //   return this.problemRepository.update(id, updates);
-  // }
 
   async blockProblem(id: string): Promise<IProblem | null> {
     return this.updateProblem(id, { isBlocked: true });
@@ -237,7 +229,7 @@ class ProblemService implements IProblemService {
   async updateProblem(id: string, updates: UpdateQuery<IProblem>): Promise<IProblem | null> {
     const validDifficulties = ["EASY", "MEDIUM", "HARD"];
     if (updates.difficulty && !validDifficulties.includes(updates.difficulty as string)) {
-      throw new BadRequestError("Invalid difficulty value");
+      throw new BadRequestError(ErrorMessages.INVALID_DIFFICULTY);
     }
     if (updates.isBlocked !== undefined && typeof updates.isBlocked !== "boolean") {
       throw new BadRequestError("isBlocked must be a boolean");
@@ -269,13 +261,13 @@ class ProblemService implements IProblemService {
     code: string
   ): Promise<{ results: TestCaseResult[]; passed: boolean }> {
     const problem = await this.problemRepository.findById(problemId);
-    if (!problem) throw new NotFoundError("Problem not found");
+    if (!problem) throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
   
     const langConfig = getLanguageConfig(language);
-    if (!langConfig) throw new BadRequestError(`Unsupported language: ${language}`);
+    if (!langConfig) throw new BadRequestError(ErrorMessages.UNSUPPORTED_LANGUAGE(language));
   
     const testCases = await TestCase.find({ problemId: problem._id, status: "active" });
-    if (!testCases.length) throw new NotFoundError("No active test cases found");
+    if (!testCases.length) throw new NotFoundError(ErrorMessages.NO_ACTIVE_TEST_CASES);
   
     const PISTON_API_URL = process.env.PISTON_API_URL || "https://emkc.org/api/v2/piston/execute";
     const results: TestCaseResult[] = [];
@@ -286,7 +278,7 @@ class ProblemService implements IProblemService {
         console.log(`Executing code for ${language} (mapped to ${langConfig.name}):\n${executableCode}`);
   
         const response = await axios.post<ExecutionResult>(PISTON_API_URL, {
-          language: langConfig.name, // Use canonical name for Piston
+          language: langConfig.name,
           version: "*",
           files: [{ name: `main.${langConfig.ext}`, content: executableCode }],
           stdin: testCase.input,
@@ -323,8 +315,6 @@ class ProblemService implements IProblemService {
     const allPassed = results.every((r) => r.passed);
     return { results, passed: allPassed };
   }
-
-
 }
 
 export default ProblemService;

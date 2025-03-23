@@ -1,14 +1,15 @@
-// ProblemController.ts
 import { Request, Response } from "express";
 import { handleError, sendResponse } from "../utils/responseUtils";
-import { IProblemService } from "../interfaces/IProblemService";
+import { IProblemService } from "../interfaces/serviceInterfaces/IProblemService";
 import fs from "fs/promises";
 import path from "path";
 import { generateBoilerplateForProblem } from "../scripts/generateBoilerplate";
 import Problem from "../models/ProblemModel";
 import { AuthRequest } from "../middlewares/authMiddleware";
 import User from "../models/UserModel";
-import { StatusCode, CommonErrors } from "../utils/errors";
+import { StatusCode } from "../utils/statusCode";
+import { SuccessMessages } from "../utils/messages";
+import { BadRequestError, ErrorMessages, NotFoundError } from "../utils/errors";
 
 export const filterProblemResponse = (problem: any) => ({
   id: problem._id.toString(),
@@ -31,18 +32,18 @@ class ProblemController {
     try {
       const { problemDir } = req.body;
       if (!problemDir || typeof problemDir !== "string") {
-        throw CommonErrors.PROBLEM_DIR_REQUIRED();
+        throw new BadRequestError(ErrorMessages.PROBLEM_DIR_REQUIRED);
       }
 
       const problem = await this.problemService.createProblemFromFiles(problemDir);
       if (!problem) {
-        throw CommonErrors.FAILED_TO_PROCESS_PROBLEM();
+        throw new NotFoundError(ErrorMessages.FAILED_TO_PROCESS_PROBLEM);
       }
 
       sendResponse(res, {
         success: true,
         status: StatusCode.CREATED,
-        message: "Problem created successfully",
+        message: SuccessMessages.PROBLEM_CREATED,
         data: { problem: filterProblemResponse(problem) },
       });
     } catch (error: any) {
@@ -54,12 +55,12 @@ class ProblemController {
     try {
       const { id } = req.params;
       if (!id || typeof id !== "string") {
-        throw CommonErrors.PROBLEM_ID_REQUIRED();
+        throw new BadRequestError(ErrorMessages.PROBLEM_ID_REQUIRED);
       }
 
       const problem = await this.problemService.getProblemById(id);
       if (!problem) {
-        throw CommonErrors.PROBLEM_NOT_FOUND();
+        throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
       }
 
       const populatedProblem = await Problem.findById(problem._id)
@@ -69,7 +70,7 @@ class ProblemController {
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: "Problem fetched successfully",
+        message: SuccessMessages.PROBLEM_FETCHED,
         data: { problem: filterProblemResponse(populatedProblem || problem) },
       });
     } catch (error: any) {
@@ -81,12 +82,12 @@ class ProblemController {
     try {
       const { slug } = req.params;
       if (!slug || typeof slug !== "string") {
-        throw CommonErrors.INVALID_SLUG();
+        throw new BadRequestError(ErrorMessages.INVALID_SLUG);
       }
 
       const problem = await this.problemService.getProblemBySlug(slug);
       if (!problem) {
-        throw CommonErrors.PROBLEM_NOT_FOUND();
+        throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
       }
 
       const populatedProblem = await Problem.findById(problem._id)
@@ -96,7 +97,7 @@ class ProblemController {
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: "Problem fetched successfully",
+        message: SuccessMessages.PROBLEM_FETCHED,
         data: {
           problem: {
             ...filterProblemResponse(populatedProblem || problem),
@@ -116,15 +117,15 @@ class ProblemController {
       const { status } = req.body;
 
       if (!id || typeof id !== "string") {
-        throw CommonErrors.PROBLEM_ID_REQUIRED();
+        throw new BadRequestError(ErrorMessages.PROBLEM_ID_REQUIRED);
       }
       if (!["premium", "free"].includes(status)) {
-        throw CommonErrors.INVALID_STATUS();
+        throw new BadRequestError(ErrorMessages.INVALID_STATUS);
       }
 
       const problem = await this.problemService.updateProblemStatus(id, status as "premium" | "free");
       if (!problem) {
-        throw CommonErrors.PROBLEM_NOT_FOUND();
+        throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
       }
 
       const populatedProblem = await Problem.findById(id)
@@ -134,7 +135,7 @@ class ProblemController {
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: "Problem status updated successfully",
+        message: SuccessMessages.PROBLEM_STATUS_UPDATED,
         data: { problem: filterProblemResponse(populatedProblem || problem) },
       });
     } catch (error: any) {
@@ -146,18 +147,18 @@ class ProblemController {
     try {
       const { problemDir } = req.body;
       if (!problemDir || typeof problemDir !== "string") {
-        throw CommonErrors.PROBLEM_DIR_REQUIRED();
+        throw new BadRequestError(ErrorMessages.PROBLEM_DIR_REQUIRED);
       }
 
       const problem = await this.problemService.processSpecificProblem(problemDir);
       if (!problem) {
-        throw CommonErrors.FAILED_TO_PROCESS_PROBLEM();
+        throw new NotFoundError(ErrorMessages.FAILED_TO_PROCESS_PROBLEM);
       }
 
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: "Problem processed successfully",
+        message: SuccessMessages.PROBLEM_PROCESSED,
         data: { problem: filterProblemResponse(problem) },
       });
     } catch (error: any) {
@@ -172,7 +173,7 @@ class ProblemController {
       const limitNum = parseInt(limit as string, 10);
 
       if (isNaN(pageNum) || isNaN(limitNum) || pageNum < 1 || limitNum < 1) {
-        throw CommonErrors.INVALID_PAGE_OR_LIMIT();
+        throw new BadRequestError(ErrorMessages.INVALID_PAGE_OR_LIMIT);
       }
 
       const query: any = {};
@@ -188,16 +189,14 @@ class ProblemController {
       let problemsSolvedCount = 0;
       let isAdmin = false;
 
-      // if (userId) {
+      if (userId) {
         const user = await User.findById(userId).select("problemsSolved role");
-        console.log("mmmmmmmmmmmmmmmmmmmm",user);
-        
         if (!user) {
-          throw CommonErrors.USER_NOT_FOUND();
+          throw new NotFoundError(ErrorMessages.USER_NOT_FOUND);
         }
         problemsSolvedCount = user.problemsSolved || 0;
         isAdmin = user.role === "admin";
-      // }
+      }
 
       if (!isAdmin) {
         query.isBlocked = { $ne: true };
@@ -215,7 +214,7 @@ class ProblemController {
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: "Problems fetched successfully",
+        message: SuccessMessages.PROBLEMS_FETCHED,
         data: {
           problems: normalizedProblems,
           problemsSolvedCount,
@@ -241,7 +240,7 @@ class ProblemController {
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: "All boilerplates generated successfully",
+        message: SuccessMessages.BOILERPLATE_ALL_GENERATED,
         data: null,
       });
     } catch (error: any) {
@@ -253,7 +252,7 @@ class ProblemController {
     try {
       const { problemDir } = req.body;
       if (!problemDir || typeof problemDir !== "string") {
-        throw CommonErrors.PROBLEM_DIR_REQUIRED();
+        throw new BadRequestError(ErrorMessages.PROBLEM_DIR_REQUIRED);
       }
 
       await generateBoilerplateForProblem(problemDir);
@@ -261,7 +260,7 @@ class ProblemController {
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: "Boilerplate generated successfully for the problem",
+        message: SuccessMessages.BOILERPLATE_SPECIFIC_GENERATED,
         data: null,
       });
     } catch (error: any) {
@@ -275,17 +274,17 @@ class ProblemController {
       const updates = req.body;
 
       if (!id || typeof id !== "string") {
-        throw CommonErrors.PROBLEM_ID_REQUIRED();
+        throw new BadRequestError(ErrorMessages.PROBLEM_ID_REQUIRED);
       }
 
       const validDifficulties = ["EASY", "MEDIUM", "HARD"];
       if (updates.difficulty && !validDifficulties.includes(updates.difficulty)) {
-        throw CommonErrors.INVALID_DIFFICULTY();
+        throw new BadRequestError(ErrorMessages.INVALID_DIFFICULTY);
       }
 
       const problem = await this.problemService.updateProblem(id, updates);
       if (!problem) {
-        throw CommonErrors.PROBLEM_NOT_FOUND();
+        throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
       }
 
       const populatedProblem = await Problem.findById(id)
@@ -295,7 +294,7 @@ class ProblemController {
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: "Problem updated successfully",
+        message: SuccessMessages.PROBLEM_UPDATED,
         data: { problem: filterProblemResponse(populatedProblem || problem) },
       });
     } catch (error: any) {
@@ -307,7 +306,7 @@ class ProblemController {
     try {
       const { problemDir } = req.params;
       if (!problemDir || typeof problemDir !== "string") {
-        throw CommonErrors.INVALID_INPUT("problemDir");
+        throw new BadRequestError(ErrorMessages.INVALID_INPUT("problemDir"));
       }
 
       const basePath = process.env.PROBLEM_BASE_PATH || path.join(__dirname, "../problems");
@@ -318,7 +317,7 @@ class ProblemController {
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: `Problem directory ${problemDir} unlinked successfully`,
+        message: SuccessMessages.PROBLEM_UNLINKED(problemDir),
         data: null,
       });
     } catch (error: any) {
@@ -330,18 +329,18 @@ class ProblemController {
     try {
       const { id } = req.params;
       if (!id || typeof id !== "string") {
-        throw CommonErrors.PROBLEM_ID_REQUIRED();
+        throw new BadRequestError(ErrorMessages.PROBLEM_ID_REQUIRED);
       }
 
       const problem = await this.problemService.blockProblem(id);
       if (!problem) {
-        throw CommonErrors.PROBLEM_NOT_FOUND();
+        throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
       }
 
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: "Problem blocked successfully",
+        message: SuccessMessages.PROBLEM_BLOCKED,
         data: { problem: filterProblemResponse(problem) },
       });
     } catch (error: any) {
@@ -353,18 +352,18 @@ class ProblemController {
     try {
       const { id } = req.params;
       if (!id || typeof id !== "string") {
-        throw CommonErrors.PROBLEM_ID_REQUIRED();
+        throw new BadRequestError(ErrorMessages.PROBLEM_ID_REQUIRED);
       }
 
       const problem = await this.problemService.unblockProblem(id);
       if (!problem) {
-        throw CommonErrors.PROBLEM_NOT_FOUND();
+        throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
       }
 
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: "Problem unblocked successfully",
+        message: SuccessMessages.PROBLEM_UNBLOCKED,
         data: { problem: filterProblemResponse(problem) },
       });
     } catch (error: any) {
@@ -376,12 +375,12 @@ class ProblemController {
     try {
       const { problemId, language, code } = req.body;
       if (!problemId || !language || !code) {
-        throw CommonErrors.EXECUTION_FIELDS_REQUIRED();
+        throw new BadRequestError(ErrorMessages.EXECUTION_FIELDS_REQUIRED);
       }
 
       const userId = req.user?.userId;
       if (!userId) {
-        throw CommonErrors.USER_ID_REQUIRED();
+        throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
       }
 
       const { results, passed } = await this.problemService.executeCode(problemId, language, code);
@@ -393,7 +392,7 @@ class ProblemController {
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: passed ? "All test cases passed" : "Some test cases failed",
+        message: passed ? SuccessMessages.CODE_EXECUTION_PASSED : SuccessMessages.CODE_EXECUTION_FAILED,
         data: { results },
       });
     } catch (error: any) {

@@ -1,9 +1,9 @@
 // C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\repositories\ProblemRepository.ts
 import { FilterQuery, UpdateQuery } from "mongoose";
-import { IProblem } from "../interfaces/IProblem";
+import { IProblem } from "../types/IProblem";
 import Problem from "../models/ProblemModel";
 import BaseRepository from "./BaseRepository";
-import { IProblemRepository } from "../interfaces/IProblemRepository";
+import { IProblemRepository } from "../interfaces/repositoryInterfaces/IProblemRepository";
 
 class ProblemRepository extends BaseRepository<IProblem> implements IProblemRepository {
   findOne(arg0: { slug: string; }) {

@@ -1,5 +1,5 @@
 // Backend\src\interfaces\IUserService.ts
-import { IUser } from "./IUser";
+import { IUser } from "../../types/IUser";
 
 export interface IUserService {
     initiateSignUp(data: Partial<IUser>): Promise<{ message: string; email: string }>;

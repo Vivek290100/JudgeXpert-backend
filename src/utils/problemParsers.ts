@@ -1,4 +1,5 @@
-import { SUPPORTED_LANGUAGES, validateLanguage } from "../config/Languages";
+//Backend\src\utils\problemParsers.ts
+import { SUPPORTED_LANGUAGES, validateLanguage } from "./languages";
 
 export class ProblemDefinitionParser {
   problemName: string = "";
@@ -53,11 +54,11 @@ export class ProblemDefinitionParser {
       throw new Error(`Unsupported language: ${language}`);
     }
 
-    const inputs = this.inputFields.map((field) => `${field.name}`).join(", "); // Remove types for JS
+    const inputs = this.inputFields.map((field) => `${field.name}`).join(", ");
     switch (language.toLowerCase()) {
       case "cpp":
         return `${this.outputFields[0].type} ${this.functionName}(${this.inputFields.map((field) => `${this.mapTypeToLanguage(field.type, language)} ${field.name}`).join(", ")}) {\n    // Implementation goes here\n    return result;\n}`;
-      case "js":
+      case "javascript":
         return `function ${this.functionName}(${inputs}) {\n    // Implementation goes here\n    return result;\n}`;
       case "rust":
         const outputType = this.mapTypeToRust(this.outputFields[0].type);
@@ -81,11 +82,10 @@ export class ProblemDefinitionParser {
           case "list<bool>": return "std::vector<bool>";
           default: return "unknown";
         }
-      case "js":
-        // No type mapping needed for JS since we don’t include types in the function signature
+      case "javascript":
         return "";
       case "rust":
-        return this.mapTypeToRust(type); // Reuse the existing Rust mapping
+        return this.mapTypeToRust(type); 
       default:
         throw new Error(`No type mapping for language: ${language}`);
     }
@@ -118,7 +118,7 @@ export class FullProblemDefinitionParser extends ProblemDefinitionParser {
         switch (language.toLowerCase()) {
           case "cpp":
             return `int size_${field.name};\n  std::cin >> size_${field.name};\n  ${this.mapTypeToLanguage(field.type, language)} ${field.name}(size_${field.name});\n  for(int i = 0; i < size_${field.name}; ++i) std::cin >> ${field.name}[i];`;
-          case "js":
+          case "javascript":
             return `const size_${field.name} = parseInt(input.shift());\nconst ${field.name} = input.splice(0, size_${field.name}).map(Number);`;
           case "rust":
             return `let size_${field.name}: usize = input.next().unwrap().parse().unwrap();\nlet ${field.name}: ${this.mapTypeToLanguage(field.type, language)} = input.take(size_${field.name}).map(|s| s.parse().unwrap()).collect();`;
@@ -129,7 +129,7 @@ export class FullProblemDefinitionParser extends ProblemDefinitionParser {
         switch (language.toLowerCase()) {
           case "cpp":
             return `std::cin >> ${field.name};`;
-          case "js":
+          case "javascript":
             return `const ${field.name} = parseInt(input.shift());`;
           case "rust":
             return `let ${field.name}: ${this.mapTypeToLanguage(field.type, language)} = input.next().unwrap().parse().unwrap();`;
@@ -158,7 +158,7 @@ std::cout << result << std::endl;
 return 0;
 }
         `;
-      case "js":
+      case "javascript":
         return `
 ##USER_CODE_HERE##
 
