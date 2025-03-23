@@ -1,5 +1,5 @@
 // src/interfaces/IProblemService.ts
-import { IProblem } from "./IProblem";
+import { IProblem } from "../../types/IProblem";
 import { FilterQuery, UpdateQuery } from "mongoose";
 
 export interface IProblemService {

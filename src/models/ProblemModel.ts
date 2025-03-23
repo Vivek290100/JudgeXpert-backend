@@ -1,4 +1,4 @@
-import { IProblem } from "../interfaces/IProblem";
+import { IProblem } from "../types/IProblem";
 import { model, Schema } from "mongoose";
 
 
@@ -16,7 +16,6 @@ const problemSchema = new Schema<IProblem>({
   defaultCodeIds: [{ type: Schema.Types.ObjectId, ref: "DefaultCode" }],
   memory: { type: Number, default: 256 },
   time: { type: Number, default: 1000 }, 
-  judge0TrackingId: { type: String, default: null },
 }, { timestamps: true,});
 
 const Problem = model<IProblem>("Problem", problemSchema);

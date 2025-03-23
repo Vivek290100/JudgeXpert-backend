@@ -1,22 +1,22 @@
-// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\utils\dependencies.ts
+//Backend\src\utils\dependencies.ts
 import UserRepository from "../repositories/UserRepository";
 import RefreshTokenRepository from "../repositories/RefreshTokenRepository";
-import { IUserRepository } from "../interfaces/IUserRepository";
-import { IRefreshTokenRepository } from "../interfaces/IRefreshTokenRepository";
+import { IUserRepository } from "../interfaces/repositoryInterfaces/IUserRepository";
+import { IRefreshTokenRepository } from "../interfaces/repositoryInterfaces/IRefreshTokenRepository";
 import UserService from "../services/UserService";
 import UserController from "../controllers/UserController";
 
 import AdminService from "../services/AdminService";
 import AdminController from "../controllers/AdminController";
-import { IUserService } from "../interfaces/IUserService";
-import { IAdminService } from "../interfaces/IAdminService";
+import { IUserService } from "../interfaces/serviceInterfaces/IUserService";
+import { IAdminService } from "../interfaces/serviceInterfaces/IAdminService";
 
 import ProblemRepository from "../repositories/ProblemRepository";
 import ProblemService from "../services/ProblemService";
 import ProblemController from "../controllers/ProblemController";
-import { IProblemService } from "../interfaces/IProblemService";
-import { IProblemRepository } from "../interfaces/IProblemRepository";
-import { CONFIG } from "../config/Config";
+import { IProblemService } from "../interfaces/serviceInterfaces/IProblemService";
+import { IProblemRepository } from "../interfaces/repositoryInterfaces/IProblemRepository";
+import { CONFIG } from "../config/config";
 import { IJWTService } from "../interfaces/utilInterfaces/IJWTService";
 import JWTService from "./jwt";
 import BrevoEmailService from "./emailBrevo";

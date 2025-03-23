@@ -2,7 +2,7 @@
 import { ProblemDefinitionParser, FullProblemDefinitionParser } from "../utils/problemParsers";
 import fs from "fs";
 import path from "path";
-import { SUPPORTED_LANGUAGES, validateLanguage } from "../config/Languages";
+import { SUPPORTED_LANGUAGES, validateLanguage } from "../utils/languages";
 
 export async function generateBoilerplateForProblem(problemDir: string): Promise<void> {
   const basePath = process.env.PROBLEM_BASE_PATH || path.join(__dirname, "../problems");

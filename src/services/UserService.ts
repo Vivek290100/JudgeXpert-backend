@@ -1,14 +1,13 @@
-import { IUser } from "../interfaces/IUser";
+import { IUser } from "../types/IUser";
 import { randomInt } from "crypto";
 import bcrypt from "bcrypt";
-import redisClient from "../utils/redis";
-import { IUserService } from "../interfaces/IUserService";
+import { IUserService } from "../interfaces/serviceInterfaces/IUserService";
 import { uploadToS3 } from "../utils/s3";
-import { CONFIG } from "../config/Config";
+import { CONFIG } from "../config/config";
 import { OAuth2Client } from "google-auth-library";
-import { IUserRepository } from "../interfaces/IUserRepository";
-import { IRefreshTokenRepository } from "../interfaces/IRefreshTokenRepository";
-import { BadRequestError, ForbiddenError, NotFoundError, UnauthorizedError } from "../utils/errors";
+import { IUserRepository } from "../interfaces/repositoryInterfaces/IUserRepository";
+import { IRefreshTokenRepository } from "../interfaces/repositoryInterfaces/IRefreshTokenRepository";
+import { BadRequestError, ErrorMessages, ForbiddenError, NotFoundError, UnauthorizedError } from "../utils/errors";
 import { IJWTService } from "../interfaces/utilInterfaces/IJWTService";
 import { IEmailService } from "../interfaces/utilInterfaces/IEmailService";
 import { IRedisService } from "../interfaces/utilInterfaces/IRedisService";
@@ -33,8 +32,7 @@ class UserService implements IUserService {
     await this.redisService.set(otpKey, otp, { EX: this.OTP_EXPIRY_SECONDS });
     await this.emailService.sendOtpEmail({
       to: email,
-      subject:
-        purpose === "signup" ? "Verify your email" : "Reset your password",
+      subject: purpose === "signup" ? "Verify your email" : "Reset your password",
       otp,
       error: "",
     });
@@ -43,7 +41,7 @@ class UserService implements IUserService {
 
   async initiateSignUp(data: Partial<IUser>): Promise<{ message: string; email: string }> {
     if (!data.email || !data.password || !data.userName) {
-      throw new BadRequestError("Required fields are missing");
+      throw new BadRequestError(ErrorMessages.MISSING_REQUIRED_FIELD("email, password, or userName"));
     }
 
     const existingUser = await this.userRepository.findByQuery({
@@ -51,7 +49,7 @@ class UserService implements IUserService {
     });
 
     if (existingUser) {
-      throw new Error("User with this email or username already exists");
+      throw new BadRequestError(ErrorMessages.USER_EXISTS);
     }
 
     const userData = {
@@ -78,15 +76,16 @@ class UserService implements IUserService {
     const storedOtp = await this.redisService.get(`signup:otp:${email}`);
 
     if (!storedOtp) {
-      throw new BadRequestError("OTP expired. Please request a new one.");
+      throw new BadRequestError(ErrorMessages.OTP_EXPIRED);
     }
     if (storedOtp !== otp) {
-      throw new BadRequestError("Invalid OTP. Please enter the correct OTP.");
+      throw new BadRequestError(ErrorMessages.INVALID_OTP);
     }
 
     const userDataString = await this.redisService.get(`tempUser:${email}`);
     if (!userDataString) {
-      throw new BadRequestError("Sign up session expired. Please try again.");    }
+      throw new BadRequestError(ErrorMessages.SIGNUP_SESSION_EXPIRED);
+    }
 
     const userData = JSON.parse(userDataString);
     const user = await this.userRepository.create(userData);
@@ -111,20 +110,19 @@ class UserService implements IUserService {
   async refreshAccessToken(userId: string): Promise<{ accessToken: string; refreshToken: string }> {
     const storedToken = await this.refreshTokenRepository.findByUserId(userId);
     if (!storedToken) {
-      throw new UnauthorizedError("No valid refresh token found. Please log in again.");    }
+      throw new UnauthorizedError(ErrorMessages.NO_REFRESH_TOKEN);
+    }
   
-    // Verify the stored refresh token (optional, since it’s in Redis)
     try {
       this.jwtService.verifyToken(storedToken, "refresh");
     } catch (error) {
       await this.refreshTokenRepository.deleteByUserId(userId);
-      throw new UnauthorizedError("Refresh token is invalid or expired. Please log in again.");    }
+      throw new UnauthorizedError(ErrorMessages.INVALID_REFRESH_TOKEN);
+    }
   
-    // Generate new tokens
     const newAccessToken = this.jwtService.generateAccessToken(userId);
     const newRefreshToken = this.jwtService.generateRefreshToken(userId);
   
-    // Update the refresh token in Redis
     await this.refreshTokenRepository.updateToken(userId, newRefreshToken);
   
     return { accessToken: newAccessToken, refreshToken: newRefreshToken };
@@ -132,19 +130,19 @@ class UserService implements IUserService {
 
   async loginUser(email: string, password: string): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
     const user = await this.userRepository.findByQuery({ email });
-    // console.log("uuuuuuuuuuuuu",user);
     
     if (!user) {
-      throw new NotFoundError("User not found");
+      throw new NotFoundError(ErrorMessages.USER_NOT_FOUND);
     }
 
     if (user.isBlocked) {
-      throw new ForbiddenError("You are not allowed to sign in. Your account has been blocked.");
+      throw new ForbiddenError(ErrorMessages.USER_BLOCKED);
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password || "");
     if (!isPasswordValid) {
-      throw new BadRequestError("Invalid password");    }
+      throw new BadRequestError(ErrorMessages.INVALID_CREDENTIALS);
+    }
 
     const userIdString = user._id.toString();
     const accessToken = this.jwtService.generateAccessToken(userIdString);
@@ -155,22 +153,22 @@ class UserService implements IUserService {
       token: refreshToken,
     });
 
-    
-
     return { user, accessToken, refreshToken };
   }
 
   async logout(userId: string): Promise<void> {
     const storedToken = await this.refreshTokenRepository.findByUserId(userId);
     if (!storedToken) {
-      throw new NotFoundError("No refresh token found for this user.");    }
+      throw new NotFoundError(ErrorMessages.NO_REFRESH_TOKEN);
+    }
     await this.refreshTokenRepository.deleteByUserId(userId);
   }
 
   async resendOtp(email: string): Promise<{ message: string; email: string }> {
     const userData = await this.redisService.get(`tempUser:${email}`);
     if (!userData) {
-      throw new BadRequestError("Sign up session expired. Please start over.");    }
+      throw new BadRequestError(ErrorMessages.SIGNUP_SESSION_EXPIRED);
+    }
     await this.generateAndSendOtp(email, "signup");
     return { message: "OTP resent successfully", email };
   }
@@ -178,9 +176,11 @@ class UserService implements IUserService {
   async forgotPassword(email: string): Promise<{ message: string; email: string }> {
     const user = await this.userRepository.findByQuery({ email });
     if (!user) {
-      throw new NotFoundError("User with this email does not exist");    }
+      throw new NotFoundError(ErrorMessages.USER_NOT_FOUND);
+    }
     if (user.isGoogleAuth) {
-      throw new BadRequestError("Please use Google to manage your password");    }
+      throw new BadRequestError(ErrorMessages.GOOGLE_AUTH_PASSWORD);
+    }
     await this.generateAndSendOtp(email, "reset");
     return { message: "Otp sent successfully for reset password", email };
   }
@@ -189,10 +189,10 @@ class UserService implements IUserService {
     const storedOtp = await this.redisService.get(`reset:otp:${email}`);
 
     if (!storedOtp) {
-      throw new BadRequestError("OTP expired. Please request a new one.");
+      throw new BadRequestError(ErrorMessages.OTP_EXPIRED);
     }
     if (storedOtp !== otp) {
-      throw new BadRequestError("Invalid OTP. Please enter the correct OTP.");
+      throw new BadRequestError(ErrorMessages.INVALID_OTP);
     }
 
     await this.redisService.set(`reset:verified:${email}`, "true", { EX: this.OTP_EXPIRY_SECONDS });
@@ -202,12 +202,12 @@ class UserService implements IUserService {
   async resetPassword(email: string, otp: string, newPassword: string): Promise<void> {
     const isVerified = await this.redisService.get(`reset:verified:${email}`);
     if (!isVerified) {
-      throw new BadRequestError("OTP not verified. Please verify OTP first.");
+      throw new BadRequestError(ErrorMessages.OTP_NOT_VERIFIED);
     }
 
     const user = await this.userRepository.findByQuery({ email });
     if (!user) {
-      throw new NotFoundError("User not found.");
+      throw new NotFoundError(ErrorMessages.USER_NOT_FOUND);
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -223,7 +223,6 @@ class UserService implements IUserService {
     linkedin?: string;
     profileImage?: Express.Multer.File;
   }): Promise<IUser> {
-
     const updateData: Partial<IUser> = {};
     if (data.fullName) updateData.fullName = data.fullName;
     if (data.github) updateData.github = data.github;
@@ -235,14 +234,13 @@ class UserService implements IUserService {
     }
 
     const updatedUser = await this.userRepository.update(data.userId, updateData);
-    if (!updatedUser) throw new NotFoundError("User not found");
+    if (!updatedUser) throw new NotFoundError(ErrorMessages.USER_NOT_FOUND);
 
     return updatedUser;
   }
 
   async googleLogin(credential: string): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
     try {
-      // Verify Google token
       const ticket = await this.googleClient.verifyIdToken({
         idToken: credential,
         audience: CONFIG.GOOGLE_CLIENT_ID,
@@ -250,12 +248,11 @@ class UserService implements IUserService {
       
       const payload = ticket.getPayload();
       if (!payload?.email) {
-        throw new BadRequestError("Invalid Google token");
+        throw new BadRequestError(ErrorMessages.INVALID_CREDENTIALS);
       }
 
       let user = await this.userRepository.findByQuery({ email: payload.email });
       
-      // If user doesn't exist, create one
       if (!user) {
         const userData: Partial<IUser> = {
           email: payload.email,
@@ -275,7 +272,7 @@ class UserService implements IUserService {
       }
 
       if (user.isBlocked) {
-        throw new ForbiddenError("Your account is blocked. Please contact support.");
+        throw new ForbiddenError(ErrorMessages.USER_BLOCKED);
       }
 
       const userIdString = user._id.toString();
@@ -289,10 +286,9 @@ class UserService implements IUserService {
 
       return { user, accessToken, refreshToken };
     } catch (error) {
-      throw new BadRequestError(`Google login failed: ${error}`);
+      throw new BadRequestError(ErrorMessages.GOOGLE_LOGIN_FAILED(error instanceof Error ? error.message : String(error)));
     }
   }
-
 }
 
 export default UserService;

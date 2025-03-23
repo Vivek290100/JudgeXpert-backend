@@ -1,7 +1,7 @@
 // Backend\src\middlewares\adminMiddleware.ts
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { CONFIG } from "../config/Config";
+import { CONFIG } from "../config/config";
 import { Dependencies } from "../utils/dependencies";
 import { sendResponse } from "../utils/responseUtils";
 

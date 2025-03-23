@@ -1,8 +1,9 @@
-// AdminController.ts
 import { Request, Response } from "express";
 import { handleError, sendResponse } from "../utils/responseUtils";
-import { IAdminService } from "../interfaces/IAdminService";
-import { StatusCode, CommonErrors } from "../utils/errors";
+import { IAdminService } from "../interfaces/serviceInterfaces/IAdminService";
+import { StatusCode } from "../utils/statusCode";
+import { SuccessMessages } from "../utils/messages";
+import { BadRequestError, ErrorMessages, NotFoundError } from "../utils/errors";
 
 class AdminController {
   constructor(private adminService: IAdminService) {}
@@ -27,7 +28,7 @@ class AdminController {
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: "Users fetched successfully",
+        message: SuccessMessages.USERS_FETCHED,
         data: {
           users: adminUsers,
           total,
@@ -44,12 +45,12 @@ class AdminController {
     try {
       const userId = req.params.id;
       if (!userId) {
-        throw CommonErrors.USER_ID_REQUIRED();
+        throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
       }
 
       const user = await this.adminService.getUserById(userId);
       if (!user) {
-        throw CommonErrors.USER_NOT_FOUND();
+        throw new NotFoundError(ErrorMessages.USER_NOT_FOUND);
       }
 
       const adminUser = {
@@ -65,7 +66,7 @@ class AdminController {
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: "User fetched successfully",
+        message: SuccessMessages.USER_FETCHED,
         data: { user: adminUser },
       });
     } catch (error: any) {
@@ -77,7 +78,7 @@ class AdminController {
     try {
       const userId = req.params.id;
       if (!userId) {
-        throw CommonErrors.USER_ID_REQUIRED();
+        throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
       }
 
       const updatedUser = await this.adminService.blockUser(userId);
@@ -94,7 +95,7 @@ class AdminController {
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: "User blocked successfully",
+        message: SuccessMessages.USER_BLOCKED,
         data: { user: adminUser },
       });
     } catch (error: any) {
@@ -106,7 +107,7 @@ class AdminController {
     try {
       const userId = req.params.id;
       if (!userId) {
-        throw CommonErrors.USER_ID_REQUIRED();
+        throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
       }
 
       const updatedUser = await this.adminService.unblockUser(userId);
@@ -123,7 +124,7 @@ class AdminController {
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: "User unblocked successfully",
+        message: SuccessMessages.USER_UNBLOCKED,
         data: { user: adminUser },
       });
     } catch (error: any) {
@@ -135,7 +136,7 @@ class AdminController {
     try {
       const { userId, isBlocked } = req.body;
       if (!userId || typeof isBlocked !== "boolean") {
-        throw CommonErrors.INVALID_REQUEST_PAYLOAD("userId and isBlocked");
+        throw new BadRequestError(ErrorMessages.INVALID_REQUEST_PAYLOAD("userId and isBlocked"));
       }
 
       const updatedUser = isBlocked
@@ -155,7 +156,7 @@ class AdminController {
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: `User ${isBlocked ? "blocked" : "unblocked"} successfully`,
+        message: isBlocked ? SuccessMessages.USER_BLOCKED : SuccessMessages.USER_UNBLOCKED,
         data: { user: adminUser },
       });
     } catch (error: any) {

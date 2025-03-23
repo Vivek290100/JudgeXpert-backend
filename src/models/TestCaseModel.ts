@@ -1,5 +1,5 @@
 import { model, Schema } from "mongoose";
-import { ITestCase } from "../interfaces/ITestCase";
+import { ITestCase } from "../types/ITestCase";
 
 const testCaseSchema = new Schema<ITestCase>({
   problemId: { type: Schema.Types.ObjectId, ref: "Problem", required: true },

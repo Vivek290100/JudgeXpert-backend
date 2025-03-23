@@ -1,6 +1,6 @@
 import { Document, FilterQuery, UpdateQuery } from "mongoose";
-import { IBaseRepository } from "./IBaseRepositories";
-import { IProblem } from "./IProblem";
+import { IBaseRepository } from "../baseRepositoryInterface/IBaseRepositories";
+import { IProblem } from "../../types/IProblem";
 
 export interface IProblemRepository extends IBaseRepository<IProblem & Document> {
   findBySlug(slug: string): Promise<IProblem | null>;

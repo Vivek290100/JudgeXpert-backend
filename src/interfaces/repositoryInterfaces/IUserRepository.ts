@@ -1,6 +1,6 @@
 import { Document, FilterQuery } from "mongoose";
-import { IBaseRepository } from "./IBaseRepositories";
-import { IUser } from "./IUser";
+import { IBaseRepository } from "../baseRepositoryInterface/IBaseRepositories";
+import { IUser } from "../../types/IUser";
 
 export interface IUserRepository extends IBaseRepository<IUser & Document> {
   findByQuery(query: FilterQuery<IUser>): Promise<IUser | null>;

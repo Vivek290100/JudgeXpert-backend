@@ -1,4 +1,3 @@
-// Backend\src\app.ts
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -8,9 +7,8 @@ import mongoSanitize from "express-mongo-sanitize";
 import connectDB from "./database/connectDb";
 import userRouter from "./routes/UserRoutes";
 import { responseLogger } from "./middlewares/logger";
-import {CONFIG} from "./config/Config"
+import {CONFIG} from "./config/config"
 import adminRouter from "./routes/AdminRoutes";
-
 
 dotenv.config();
 connectDB();
@@ -31,14 +29,11 @@ app.use(
 );
 
 
-
 app.use(express.json());
 app.use(responseLogger); 
 app.use(cookieParser());
 
 app.use("/", userRouter);
 app.use("/admin", adminRouter)
-
-
 
 export default app;

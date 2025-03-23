@@ -1,7 +1,7 @@
 // Backend\src\middlewares\authMiddleware.ts
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { CONFIG } from "../config/Config";
+import { CONFIG } from "../config/config";
 
 export interface AuthRequest extends Request {
   user?: { userId: string };

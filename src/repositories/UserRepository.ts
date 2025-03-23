@@ -1,9 +1,9 @@
 // Backend\src\repositories\UserRepository.ts
 import { FilterQuery } from "mongoose";
-import { IUser } from "../interfaces/IUser";
+import { IUser } from "../types/IUser";
 import User from "../models/UserModel";
 import BaseRepository from "./BaseRepository";
-import { IUserRepository } from "../interfaces/IUserRepository";
+import { IUserRepository } from "../interfaces/repositoryInterfaces/IUserRepository";
 
 class UserRepository extends BaseRepository<IUser> implements IUserRepository {
   constructor() {

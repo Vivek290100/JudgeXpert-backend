@@ -1,8 +1,9 @@
-// UserController.ts
 import { Request, Response } from "express";
 import { sendResponse, handleError, setAuthCookie, clearAuthCookie, filterUserResponse } from "../utils/responseUtils";
-import { IUserService } from "../interfaces/IUserService";
-import { StatusCode, CommonErrors } from "../utils/errors";
+import { IUserService } from "../interfaces/serviceInterfaces/IUserService";
+import { StatusCode } from "../utils/statusCode";
+import { SuccessMessages } from "../utils/messages";
+import { BadRequestError, ErrorMessages, UnauthorizedError } from "../utils/errors";
 
 interface AuthRequest extends Request {
   user?: { userId: string };
@@ -24,7 +25,7 @@ class UserController {
       sendResponse(res, {
         success: true,
         status: StatusCode.CREATED,
-        message: result.message || "Sign-up initiated successfully",
+        message: result.message || SuccessMessages.SIGNUP_INITIATED,
         data: result.email ? { email: result.email } : {},
       });
     } catch (error: any) {
@@ -44,7 +45,7 @@ class UserController {
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: "OTP verified and user created successfully",
+        message: SuccessMessages.OTP_VERIFIED_USER_CREATED,
         data: { user: filteredUser, accessToken },
       });
     } catch (error: any) {
@@ -59,7 +60,7 @@ class UserController {
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: result.message || "OTP resent successfully",
+        message: result.message || SuccessMessages.OTP_RESENT,
         data: result.email ? { email: result.email } : {},
       });
     } catch (error: any) {
@@ -69,21 +70,17 @@ class UserController {
 
   async loginUser(req: Request, res: Response): Promise<void> {
     try {
-      console.log("==req.body===", req.body);
       const { email, password } = req.body;
       const result = await this._userService.loginUser(email, password);
-      console.log("==result===", result);
       const { user, accessToken, refreshToken } = result;
 
       setAuthCookie(res, accessToken);
       const filteredUser = filterUserResponse(user);
 
-      console.log("kkkkkkk", filteredUser, accessToken, user._id);
-
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: "Login successful",
+        message: SuccessMessages.LOGIN_SUCCESS,
         data: { user: filteredUser, accessToken, userId: user._id.toString() },
       });
     } catch (error: any) {
@@ -95,7 +92,7 @@ class UserController {
     try {
       const { credential } = req.body;
       if (!credential) {
-        throw CommonErrors.GOOGLE_CREDENTIAL_REQUIRED();
+        throw new BadRequestError(ErrorMessages.GOOGLE_CREDENTIAL_REQUIRED);
       }
 
       const result = await this._userService.googleLogin(credential);
@@ -107,7 +104,7 @@ class UserController {
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: "Google login successful",
+        message: SuccessMessages.GOOGLE_LOGIN_SUCCESS,
         data: { user: filteredUser, accessToken },
       });
     } catch (error: any) {
@@ -118,7 +115,7 @@ class UserController {
   async logout(req: AuthRequest, res: Response): Promise<void> {
     try {
       const userId = req.user?.userId;
-      if (!userId) throw CommonErrors.UNAUTHORIZED_ACCESS();
+      if (!userId) throw new UnauthorizedError(ErrorMessages.UNAUTHORIZED_ACCESS);
 
       await this._userService.logout(userId);
       clearAuthCookie(res);
@@ -126,7 +123,7 @@ class UserController {
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: "Logged out successfully",
+        message: SuccessMessages.LOGOUT_SUCCESS,
         data: null,
       });
     } catch (error: any) {
@@ -141,7 +138,7 @@ class UserController {
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: result.message || "Password reset initiated successfully",
+        message: result.message || SuccessMessages.PASSWORD_RESET_INITIATED,
         data: result.email ? { email: result.email } : {},
       });
     } catch (error: any) {
@@ -157,7 +154,7 @@ class UserController {
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: "OTP verified successfully, Now you can enter new and confirm password",
+        message: SuccessMessages.OTP_VERIFIED,
         data: { email },
       });
     } catch (error: any) {
@@ -169,7 +166,7 @@ class UserController {
     try {
       const { email, otp, newPassword } = req.body;
       if (!email || !newPassword) {
-        throw CommonErrors.ALL_FIELDS_REQUIRED();
+        throw new BadRequestError(ErrorMessages.ALL_FIELDS_REQUIRED);
       }
 
       await this._userService.resetPassword(email, otp, newPassword);
@@ -177,7 +174,7 @@ class UserController {
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: "Password reset successfully",
+        message: SuccessMessages.PASSWORD_RESET_SUCCESS,
         data: null,
       });
     } catch (error: any) {
@@ -188,7 +185,7 @@ class UserController {
   async updateProfile(req: AuthRequest, res: Response): Promise<void> {
     try {
       const userId = req.user?.userId;
-      if (!userId) throw CommonErrors.UNAUTHORIZED_ACCESS();
+      if (!userId) throw new UnauthorizedError(ErrorMessages.UNAUTHORIZED_ACCESS);
 
       const { fullName, github, linkedin } = req.body;
       const profileImage = req.file;
@@ -204,7 +201,7 @@ class UserController {
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: "Profile updated successfully",
+        message: SuccessMessages.PROFILE_UPDATED,
         data: { user: filterUserResponse(updatedUser) },
       });
     } catch (error: any) {
@@ -216,7 +213,7 @@ class UserController {
     try {
       const { userId } = req.body;
       if (!userId) {
-        throw CommonErrors.USER_ID_REQUIRED();
+        throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
       }
 
       const { accessToken: newAccessToken } = await this._userService.refreshAccessToken(userId);
@@ -226,7 +223,7 @@ class UserController {
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
-        message: "Token refreshed successfully",
+        message: SuccessMessages.TOKEN_REFRESHED,
         data: { accessToken: newAccessToken },
       });
     } catch (error: any) {
