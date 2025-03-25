@@ -10,9 +10,15 @@ import User from "../models/UserModel";
 import { StatusCode } from "../utils/statusCode";
 import { SuccessMessages } from "../utils/messages";
 import { BadRequestError, ErrorMessages, NotFoundError } from "../utils/errors";
+import { IProblem } from "../types/IProblem";
+import { FilterQuery } from "mongoose";
+
+
+interface AdminAuthRequest extends AuthRequest {
+  user?: { userId: string; role?: string }; 
+}
 
 export const filterProblemResponse = (problem: any) => ({
-  id: problem._id.toString(),
   _id: problem._id.toString(),
   title: problem.title,
   slug: problem.slug,
@@ -166,50 +172,102 @@ class ProblemController {
     }
   }
 
-  async getProblems(req: AuthRequest, res: Response): Promise<void> {
+  async getProblems(req: AdminAuthRequest, res: Response): Promise<void> {
     try {
-      const { page = "1", limit = "10", search = "", difficulty, status } = req.query;
-      const pageNum = parseInt(page as string, 10);
-      const limitNum = parseInt(limit as string, 10);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+      const search = (req.query.search as string) || "";
+      const difficulty = req.query.difficulty as string;
+      const status = req.query.status as string;
+      const solved = req.query.solved as string;
 
-      if (isNaN(pageNum) || isNaN(limitNum) || pageNum < 1 || limitNum < 1) {
-        throw new BadRequestError(ErrorMessages.INVALID_PAGE_OR_LIMIT);
+      // Base query: Only filter out blocked problems for non-admins
+      const query: FilterQuery<IProblem> = {};
+      const userId = req.user?.userId;
+      const userRole = req.user?.role; // From adminMiddleware
+
+      // For non-admins, exclude blocked problems
+      if (userRole !== "admin") {
+        query.isBlocked = { $ne: true };
       }
 
-      const query: any = {};
-      if (search) query.title = { $regex: search, $options: "i" };
-      if (difficulty && ["EASY", "MEDIUM", "HARD"].includes(difficulty as string)) {
+      // Apply additional filters
+      if (search) {
+        query.$or = [
+          { title: { $regex: search, $options: "i" } },
+          { slug: { $regex: search, $options: "i" } },
+        ];
+      }
+      if (difficulty && ["EASY", "MEDIUM", "HARD"].includes(difficulty)) {
         query.difficulty = difficulty;
       }
-      if (status && ["premium", "free"].includes(status as string)) {
+      if (status && ["premium", "free"].includes(status)) {
         query.status = status;
       }
 
-      const userId = req.user?.userId;
+      let userProblemStatus: { problemId: string; solved: boolean }[] = [];
       let problemsSolvedCount = 0;
-      let isAdmin = false;
 
       if (userId) {
-        const user = await User.findById(userId).select("problemsSolved role");
+        const user = await User.findById(userId).select("problemsSolved solvedProblems");
         if (!user) {
           throw new NotFoundError(ErrorMessages.USER_NOT_FOUND);
         }
         problemsSolvedCount = user.problemsSolved || 0;
-        isAdmin = user.role === "admin";
+        userProblemStatus = (user.solvedProblems || []).map((problemId) => ({
+          problemId: problemId.toString(),
+          solved: true,
+        }));
       }
 
-      if (!isAdmin) {
-        query.isBlocked = { $ne: true };
+      const { problems, total } = await this.problemService.getProblemsPaginated(page, limit, query);
+
+      if (solved === "true" || solved === "false") {
+        const solvedFilter = solved === "true";
+        const solvedProblemIds = userProblemStatus
+          .filter((status) => status.solved === solvedFilter)
+          .map((status) => status.problemId);
+        if (solvedProblemIds.length > 0) {
+          if (solvedFilter) {
+            query._id = { $in: solvedProblemIds };
+          } else {
+            query._id = { $nin: solvedProblemIds };
+          }
+          const filteredResult = await this.problemService.getProblemsPaginated(page, limit, query);
+          const totalFiltered = await this.problemService.countProblems(query);
+          sendResponse(res, {
+            success: true,
+            status: StatusCode.SUCCESS,
+            message: SuccessMessages.PROBLEMS_FETCHED,
+            data: {
+              problems: filteredResult.problems.map(filterProblemResponse),
+              userProblemStatus,
+              problemsSolvedCount,
+              total: totalFiltered,
+              totalPages: Math.ceil(totalFiltered / limit),
+              currentPage: page,
+            },
+          });
+          return;
+        } else if (solvedFilter) {
+          sendResponse(res, {
+            success: true,
+            status: StatusCode.SUCCESS,
+            message: SuccessMessages.PROBLEMS_FETCHED,
+            data: {
+              problems: [],
+              userProblemStatus,
+              problemsSolvedCount,
+              total: 0,
+              totalPages: 0,
+              currentPage: page,
+            },
+          });
+          return;
+        }
       }
 
-      const problems = await Problem.find(query)
-        .populate("defaultCodeIds")
-        .populate("testCaseIds");
-
-      const total = problems.length;
-
-      const paginatedProblems = problems.slice((pageNum - 1) * limitNum, pageNum * limitNum);
-      const normalizedProblems = paginatedProblems.map((problem) => filterProblemResponse(problem));
+      const normalizedProblems = problems.map(filterProblemResponse);
 
       sendResponse(res, {
         success: true,
@@ -217,10 +275,11 @@ class ProblemController {
         message: SuccessMessages.PROBLEMS_FETCHED,
         data: {
           problems: normalizedProblems,
+          userProblemStatus,
           problemsSolvedCount,
           total,
-          totalPages: Math.ceil(total / limitNum),
-          currentPage: pageNum,
+          totalPages: Math.ceil(total / limit),
+          currentPage: page,
         },
       });
     } catch (error: any) {
@@ -373,7 +432,7 @@ class ProblemController {
 
   async executeCode(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const { problemId, language, code } = req.body;
+      const { problemId, language, code, isRunOnly = false } = req.body;      
       if (!problemId || !language || !code) {
         throw new BadRequestError(ErrorMessages.EXECUTION_FIELDS_REQUIRED);
       }
@@ -383,10 +442,13 @@ class ProblemController {
         throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
       }
 
-      const { results, passed } = await this.problemService.executeCode(problemId, language, code);
+      const { results, passed } = await this.problemService.executeCode(problemId, language, code, userId, isRunOnly);
 
       if (passed) {
-        await User.findByIdAndUpdate(userId, { $inc: { problemsSolved: 1 } });
+        await User.findByIdAndUpdate(userId, {
+          $inc: { problemsSolved: 1 },
+          $addToSet: { solvedProblems: problemId },
+        });
       }
 
       sendResponse(res, {

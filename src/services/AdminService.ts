@@ -6,8 +6,17 @@ import { NotFoundError, InternalServerError, ErrorMessages } from "../utils/erro
 class AdminService implements IAdminService {
   constructor(private userRepository: IUserRepository) {}
 
-  async getAllUsers(page: number = 1, limit: number = 10): Promise<{ users: IUser[], total: number }> {
-    const { users, total } = await this.userRepository.findPaginated(page, limit, { role: { $ne: "admin" } });
+  async getAllUsers(page: number = 1, limit: number = 10, search: string = ""): Promise<{ users: IUser[], total: number }> {
+    const query = {
+      role: { $ne: "admin" },
+      ...(search && {
+        $or: [
+          { userName: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } },
+        ],
+      }),
+    };
+    const { users, total } = await this.userRepository.findPaginated(page, limit, query);
     return { users, total };
   }
 
