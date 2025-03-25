@@ -10,6 +10,7 @@ export const UserRoutes = {
   RESET_PASSWORD: "/reset-password",
   UPDATE_PROFILE: "/update-profile",
   GOOGLE_LOGIN: "/google-login",
+  REFRESH_TOKEN: "/auth/refresh-token"
  
 } as const;
 
@@ -34,6 +35,8 @@ export const AdminRoutes = {
 export const ProblemRoutes = {
   GET_ALL_PROBLEMS: "/problems",
   GET_PROBLEM_BY_SLUG: "/problems/:slug",
+  GET_SUBMISSIONS: "/submissions",
+
 
   EXECUTE_CODE: "/execute",
 } as const;

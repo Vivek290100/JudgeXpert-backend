@@ -58,6 +58,19 @@ export const filterUserResponse = (user: any) => ({
   linkedin: user.linkedin || "",
 });
 
+export const filterProblemResponse = (problem: any) => ({
+  _id: problem._id.toString(),
+  title: problem.title,
+  slug: problem.slug,
+  difficulty: problem.difficulty,
+  status: problem.status,
+  updatedAt: problem.updatedAt,
+  description: problem.description || "",
+  defaultCodeIds: problem.defaultCodeIds || [],
+  testCaseIds: problem.testCaseIds || [],
+  isBlocked: problem.isBlocked,
+});
+
 export const setAuthCookie = (res: Response, accessToken: string): void => {
   res.cookie("accessToken", accessToken, {
     httpOnly: true,

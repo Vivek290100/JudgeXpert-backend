@@ -35,4 +35,5 @@ export const SuccessMessages = {
   PROBLEM_UNBLOCKED: "Problem unblocked successfully",
   CODE_EXECUTION_PASSED: "All test cases passed",
   CODE_EXECUTION_FAILED: "Some test cases failed",
+  SUBMISSIONS_FETCHED: "Submissions fetched successfully",
 };
