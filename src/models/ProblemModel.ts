@@ -16,7 +16,10 @@ const problemSchema = new Schema<IProblem>({
   defaultCodeIds: [{ type: Schema.Types.ObjectId, ref: "DefaultCode" }],
   memory: { type: Number, default: 256 },
   time: { type: Number, default: 1000 }, 
-}, { timestamps: true,});
+  solved: { type: Boolean, default: false, required: false },
+  isPremium: { type: Boolean, default: false, required: false },
+},
+{ timestamps: true,});
 
 const Problem = model<IProblem>("Problem", problemSchema);
 export default Problem;

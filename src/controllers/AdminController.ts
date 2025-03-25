@@ -12,7 +12,8 @@ class AdminController {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
-      const { users, total } = await this.adminService.getAllUsers(page, limit);
+      const search = (req.query.search as string) || "";
+      const { users, total } = await this.adminService.getAllUsers(page, limit, search);
 
       const adminUsers = users.map((user) => ({
         id: user._id.toString(),

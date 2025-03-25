@@ -12,9 +12,6 @@ export interface IProblemService {
   updateProblem(id: string, updates: UpdateQuery<IProblem>): Promise<IProblem | null>;
   blockProblem(id: string): Promise<IProblem | null>; 
   unblockProblem(id: string): Promise<IProblem | null>;
-  executeCode(
-    problemId: string,
-    language: string,
-    code: string
-  ): Promise<{ results: any[]; passed: boolean }>;
+  executeCode( problemId: string, language: string, code: string,userId: string, isRunOnly: boolean  ): Promise<{ results: any[]; passed: boolean }>;
+  countProblems(query?: FilterQuery<IProblem>): Promise<number>;
 }

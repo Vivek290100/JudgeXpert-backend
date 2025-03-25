@@ -9,12 +9,13 @@ export interface IProblem extends Document {
   difficulty: "EASY" | "MEDIUM" | "HARD";
   slug: string;
   solvedCount: number;
+  solvedProblems: any[];
   status: "premium" | "free";
   isBlocked: Boolean;
   createdAt: Date;
   updatedAt: Date;
   testCaseIds: Types.ObjectId[];
   defaultCodeIds: Types.ObjectId[];
-  memory: number; 
-  time: number; 
+  memory: number;
+  time: number;
 }

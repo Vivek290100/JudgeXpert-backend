@@ -11,6 +11,7 @@ export interface IUser extends Document {
   profileImage: string,
   joinedDate?: Date;
   problemsSolved: number;
+  solvedProblems: Types.ObjectId[] | string[];
   rank: number;
   isBlocked: boolean;
   isPremium: boolean;

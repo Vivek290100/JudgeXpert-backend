@@ -1,4 +1,4 @@
-// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\database\connectDb.ts
+//Backend\src\database\connectDb.ts
 import mongoose from "mongoose";
 import { CONFIG } from "../config/config";
 
@@ -8,7 +8,7 @@ const connectDB = async (): Promise<void> => {
     await mongoose.connect(URI);
     console.log("🍃 database connected successfully!");
   } catch (error) {
-    console.log("Error connecting to database: ", error);
+    console.log("Database: ", error);
   }
 };
 
