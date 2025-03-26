@@ -15,6 +15,7 @@ import { TestCaseResult } from "../types/ITestCaseResult";
 import { BadRequestError, ErrorMessages, NotFoundError } from "../utils/errors";
 import Submission from "../models/SubmissionModel";
 import User from "../models/UserModel";
+import { ISubmission } from "../types/ISubmission";
 
 class ProblemService implements IProblemService {
   constructor(private problemRepository: IProblemRepository) {}
@@ -273,22 +274,27 @@ class ProblemService implements IProblemService {
     }));
   }
 
-  async executeCode( problemId: string, language: string, code: string, userId: string, isRunOnly: boolean = false ): Promise<{ results: TestCaseResult[]; passed: boolean }> {
+  async executeCode(
+    problemId: string,
+    language: string,
+    code: string,
+    userId: string,
+    isRunOnly: boolean = false
+  ): Promise<{ results: TestCaseResult[]; passed: boolean }> {
     const problem = await this.problemRepository.findById(problemId);
     if (!problem) throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
-
+  
     const langConfig = getLanguageConfig(language);
     if (!langConfig) throw new BadRequestError(ErrorMessages.UNSUPPORTED_LANGUAGE(language));
-
+  
     const testCases = await TestCase.find({ problemId: problem._id, status: "active" });
     if (!testCases.length) throw new NotFoundError(ErrorMessages.NO_ACTIVE_TEST_CASES);
-
+  
     const PISTON_API_URL = process.env.PISTON_API_URL || "https://emkc.org/api/v2/piston/execute";
     const results: TestCaseResult[] = [];
-
-    // for 1st 2 test cases
+  
     const testCasesToRun = isRunOnly ? testCases.slice(0, 2) : testCases;
-
+  
     for (const testCase of testCasesToRun) {
       try {
         const executableCode = langConfig.wrapper(code, testCase.input);
@@ -298,12 +304,12 @@ class ProblemService implements IProblemService {
           files: [{ name: `main.${langConfig.ext}`, content: executableCode }],
           stdin: testCase.input,
         });
-
+  
         const { stdout, stderr, code: exitCode } = response.data.run;
         const output = stdout.trim();
         const expected = testCase.output.trim();
         const passed = output === expected && exitCode === 0;
-
+  
         results.push({
           testCaseIndex: testCase.index,
           input: testCase.input,
@@ -324,37 +330,63 @@ class ProblemService implements IProblemService {
         });
       }
     }
-
+  
     const allPassed = results.every((r) => r.passed);
-
-    // Save submission to database
-    const submission = new Submission({
-      userId,
-      problemId,
-      language,
-      code,
-      results,
-      passed: allPassed,
-      isRunOnly,
-    });
-    await submission.save();
-
-    // If all test cases passed on "Submit" (not "Run"), update user's solved problems
-    if (!isRunOnly && allPassed) {
-      await User.findByIdAndUpdate(userId, {
-        $inc: { problemsSolved: 1 },
-        $addToSet: { solvedProblems: problemId },
+  
+    // Save submission to database only for "Submit" actions (isRunOnly === false)
+    if (!isRunOnly) {
+      const submission = new Submission({
+        userId,
+        problemId,
+        language,
+        code,
+        results,
+        passed: allPassed,
       });
-      await this.problemRepository.update(problemId, { $inc: { solvedCount: 1 } });
+      await submission.save();
+  
+      // If the submission passed, update user stats only if the problem hasn't been solved before
+      if (allPassed) {
+        const user = await User.findById(userId).select("solvedProblems");
+        if (!user) throw new NotFoundError(ErrorMessages.USER_NOT_FOUND);
+  
+        const isAlreadySolved = user.solvedProblems.some((id) => id.toString() === problemId);
+        if (!isAlreadySolved) {
+          await User.findByIdAndUpdate(userId, {
+            $inc: { problemsSolved: 1 },
+            $addToSet: { solvedProblems: problemId },
+          });
+          await this.problemRepository.update(problemId, { $inc: { solvedCount: 1 } });
+        }
+      }
     }
-
+  
     return { results, passed: allPassed };
   }
-
   async incrementSolvedCount(problemId: string): Promise<IProblem | null> {
     const problem = await this.problemRepository.findById(problemId);
     if (!problem) throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
     return this.problemRepository.update(problemId, { $inc: { solvedCount: 1 } });
+  }
+
+  async getUserSubmissions(userId: string, problemSlug?: string): Promise<ISubmission[]> {
+    const query: FilterQuery<ISubmission> = { userId };
+  
+    if (problemSlug) {
+      const problem = await this.problemRepository.findBySlug(problemSlug);
+      if (!problem) {
+        throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
+      }
+      query.problemId = problem._id.toString();
+    }
+  
+    const submissions = await Submission.find(query)
+      .populate("problemId", "title slug")
+      .sort({ submittedAt: -1 })
+      .lean()
+      .exec();
+  
+    return submissions;
   }
 }
 

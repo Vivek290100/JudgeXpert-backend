@@ -1,6 +1,7 @@
 // src/interfaces/IProblemService.ts
 import { IProblem } from "../../types/IProblem";
 import { FilterQuery, UpdateQuery } from "mongoose";
+import { ISubmission } from "../../types/ISubmission";
 
 export interface IProblemService {
   createProblemFromFiles(problemDir: string): Promise<IProblem | null>;
@@ -13,5 +14,5 @@ export interface IProblemService {
   blockProblem(id: string): Promise<IProblem | null>; 
   unblockProblem(id: string): Promise<IProblem | null>;
   executeCode( problemId: string, language: string, code: string,userId: string, isRunOnly: boolean  ): Promise<{ results: any[]; passed: boolean }>;
-  countProblems(query?: FilterQuery<IProblem>): Promise<number>;
-}
+  countProblems(query?: FilterQuery<IProblem>): Promise<number>
+  getUserSubmissions(userId: string, problemSlug?: string): Promise<ISubmission[]>;}

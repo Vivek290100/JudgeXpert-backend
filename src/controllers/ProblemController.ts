@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { handleError, sendResponse } from "../utils/responseUtils";
+import { filterProblemResponse, handleError, sendResponse } from "../utils/responseUtils";
 import { IProblemService } from "../interfaces/serviceInterfaces/IProblemService";
 import fs from "fs/promises";
 import path from "path";
@@ -12,24 +12,14 @@ import { SuccessMessages } from "../utils/messages";
 import { BadRequestError, ErrorMessages, NotFoundError } from "../utils/errors";
 import { IProblem } from "../types/IProblem";
 import { FilterQuery } from "mongoose";
+import { ISubmission } from "../types/ISubmission";
 
 
 interface AdminAuthRequest extends AuthRequest {
   user?: { userId: string; role?: string }; 
 }
 
-export const filterProblemResponse = (problem: any) => ({
-  _id: problem._id.toString(),
-  title: problem.title,
-  slug: problem.slug,
-  difficulty: problem.difficulty,
-  status: problem.status,
-  updatedAt: problem.updatedAt,
-  description: problem.description || "",
-  defaultCodeIds: problem.defaultCodeIds || [],
-  testCaseIds: problem.testCaseIds || [],
-  isBlocked: problem.isBlocked,
-});
+
 
 class ProblemController {
   constructor(private problemService: IProblemService) {}
@@ -432,25 +422,18 @@ class ProblemController {
 
   async executeCode(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const { problemId, language, code, isRunOnly = false } = req.body;      
+      const { problemId, language, code, isRunOnly = false } = req.body;
       if (!problemId || !language || !code) {
         throw new BadRequestError(ErrorMessages.EXECUTION_FIELDS_REQUIRED);
       }
-
+  
       const userId = req.user?.userId;
       if (!userId) {
         throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
       }
-
+  
       const { results, passed } = await this.problemService.executeCode(problemId, language, code, userId, isRunOnly);
-
-      if (passed) {
-        await User.findByIdAndUpdate(userId, {
-          $inc: { problemsSolved: 1 },
-          $addToSet: { solvedProblems: problemId },
-        });
-      }
-
+  
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
@@ -461,6 +444,48 @@ class ProblemController {
       handleError(res, error);
     }
   }
+
+  async getUserSubmissions(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
+      }
+  
+      const { problemSlug } = req.query;
+      let slug: string | undefined;
+  
+      if (problemSlug !== undefined) {
+        if (typeof problemSlug !== "string") {
+          throw new BadRequestError(ErrorMessages.INVALID_INPUT("problemSlug must be a string"));
+        }
+        slug = problemSlug;
+      }
+  
+      const submissions = await this.problemService.getUserSubmissions(userId, slug);
+  
+      sendResponse(res, {
+        success: true,
+        status: StatusCode.SUCCESS,
+        message: SuccessMessages.SUBMISSIONS_FETCHED,
+        data: {
+          submissions: submissions.map(sub => ({
+            _id: sub._id,
+            language: sub.language,
+            passed: sub.passed,
+            testCasesPassed: sub.results.filter(r => r.passed).length,
+            totalTestCases: sub.results.length,
+            code: sub.code,
+            createdAt: sub.submittedAt.toISOString(),
+          })),
+        },
+      });
+    } catch (error: any) {
+      handleError(res, error);
+    }
+  }
+
+  
 }
 
 export default ProblemController;
