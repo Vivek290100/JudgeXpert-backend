@@ -147,6 +147,8 @@ class ProblemController {
       }
 
       const problem = await this.problemService.processSpecificProblem(problemDir);
+      console.log("oooooo",problem);
+      
       if (!problem) {
         throw new NotFoundError(ErrorMessages.FAILED_TO_PROCESS_PROBLEM);
       }

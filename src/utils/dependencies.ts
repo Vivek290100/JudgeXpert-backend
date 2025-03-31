@@ -23,6 +23,11 @@ import BrevoEmailService from "./emailBrevo";
 import { IEmailService } from "../interfaces/utilInterfaces/IEmailService";
 import { IRedisService } from "../interfaces/utilInterfaces/IRedisService";
 import RedisService from "./redis";
+import { IDiscussionRepository } from "../interfaces/repositoryInterfaces/IDiscussionRepository";
+import DiscussionRepository from "../repositories/DiscussionRepository";
+import DiscussionService from "../services/DiscussionService";
+import { IDiscussionService } from "../interfaces/serviceInterfaces/IDiscussionService";
+import DiscussionController from "../controllers/DiscussionController";
 
 // User Dependencies
 const userRepository: IUserRepository = new UserRepository();
@@ -49,6 +54,11 @@ const problemRepository: IProblemRepository = new ProblemRepository();
 const problemService: IProblemService = new ProblemService(problemRepository);
 const problemController = new ProblemController(problemService);
 
+
+const discussionRepository: IDiscussionRepository = new DiscussionRepository();
+const discussionService: IDiscussionService = new DiscussionService( discussionRepository, problemRepository);
+const discussionController = new DiscussionController(discussionService);
+
 export const Dependencies = {
   userRepository,
   refreshTokenRepository,
@@ -63,6 +73,10 @@ export const Dependencies = {
   problemRepository,
   problemService,
   problemController,
+
+  discussionRepository,
+  discussionService,
+  discussionController,
 };
 
 export default Dependencies;

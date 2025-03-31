@@ -36,4 +36,7 @@ export const SuccessMessages = {
   CODE_EXECUTION_PASSED: "All test cases passed",
   CODE_EXECUTION_FAILED: "Some test cases failed",
   SUBMISSIONS_FETCHED: "Submissions fetched successfully",
+
+  DISCUSSION_CREATED: "discission created",
+  DISCUSSIONS_FETCHED: "doscussions feched successfully"
 };

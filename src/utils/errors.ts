@@ -41,6 +41,8 @@ export const ErrorMessages = {
   TEST_CASE_MISMATCH: "Mismatch between input and output test case files",
   UNSUPPORTED_LANGUAGE: (lang: string) => `Unsupported language: ${lang}`,
   NO_ACTIVE_TEST_CASES: "No active test cases found",
+
+  DISCUSSION_NOT_FOUND: "discussions not found"
 };
 
 // Error Classes

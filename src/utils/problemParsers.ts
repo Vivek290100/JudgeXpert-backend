@@ -60,9 +60,6 @@ export class ProblemDefinitionParser {
         return `${this.outputFields[0].type} ${this.functionName}(${this.inputFields.map((field) => `${this.mapTypeToLanguage(field.type, language)} ${field.name}`).join(", ")}) {\n    // Implementation goes here\n    return result;\n}`;
       case "javascript":
         return `function ${this.functionName}(${inputs}) {\n    // Implementation goes here\n    return result;\n}`;
-      case "rust":
-        const outputType = this.mapTypeToRust(this.outputFields[0].type);
-        return `fn ${this.functionName}(${this.inputFields.map((field) => `${this.mapTypeToLanguage(field.type, language)} ${field.name}`).join(", ")}) -> ${outputType} {\n    // Implementation goes here\n    result\n}`;
       default:
         throw new Error(`No boilerplate generator for language: ${language}`);
     }
@@ -84,8 +81,6 @@ export class ProblemDefinitionParser {
         }
       case "javascript":
         return "";
-      case "rust":
-        return this.mapTypeToRust(type); 
       default:
         throw new Error(`No type mapping for language: ${language}`);
     }
@@ -120,8 +115,6 @@ export class FullProblemDefinitionParser extends ProblemDefinitionParser {
             return `int size_${field.name};\n  std::cin >> size_${field.name};\n  ${this.mapTypeToLanguage(field.type, language)} ${field.name}(size_${field.name});\n  for(int i = 0; i < size_${field.name}; ++i) std::cin >> ${field.name}[i];`;
           case "javascript":
             return `const size_${field.name} = parseInt(input.shift());\nconst ${field.name} = input.splice(0, size_${field.name}).map(Number);`;
-          case "rust":
-            return `let size_${field.name}: usize = input.next().unwrap().parse().unwrap();\nlet ${field.name}: ${this.mapTypeToLanguage(field.type, language)} = input.take(size_${field.name}).map(|s| s.parse().unwrap()).collect();`;
           default:
             throw new Error(`No input reading implementation for language: ${language}`);
         }
@@ -131,8 +124,6 @@ export class FullProblemDefinitionParser extends ProblemDefinitionParser {
             return `std::cin >> ${field.name};`;
           case "javascript":
             return `const ${field.name} = parseInt(input.shift());`;
-          case "rust":
-            return `let ${field.name}: ${this.mapTypeToLanguage(field.type, language)} = input.next().unwrap().parse().unwrap();`;
           default:
             throw new Error(`No input reading implementation for language: ${language}`);
         }
@@ -166,20 +157,6 @@ const input = require('fs').readFileSync('/dev/stdin', 'utf8').trim().split('\\n
 ${inputReads}
 ${functionCall}
 ${outputWrite}
-        `;
-      case "rust":
-        return `
-use std::io::{self, BufRead};
-
-##USER_CODE_HERE##
-
-fn main() {
-let stdin = io::stdin();
-let mut input = stdin.lock().lines().map(|l| l.unwrap());
-${inputReads}
-${functionCall}
-println!("{}", result);
-}
         `;
       default:
         throw new Error(`No full boilerplate generator for language: ${language}`);
