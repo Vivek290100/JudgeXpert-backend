@@ -178,11 +178,11 @@ class ProblemService implements IProblemService {
       { new: true }
     );
 
-    try {
-      await fs.rm(fullProblemDir, { recursive: true });
-    } catch (error) {
-      console.error(`Failed to delete problem directory ${problemDir}:`, error);
-    }
+    // try {
+    //   await fs.rm(fullProblemDir, { recursive: true });
+    // } catch (error) {
+    //   console.error(`Failed to delete problem directory ${problemDir}:`, error);
+    // }
 
     return problem;
   }

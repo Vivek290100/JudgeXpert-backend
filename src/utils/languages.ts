@@ -21,22 +21,6 @@ export const SUPPORTED_LANGUAGES: LanguageConfig[] = [
     },
   },
   {
-    name: "rust",
-    id: 73, // Rust 1.40.0
-    ext: "rs",
-    wrapper: (code, input) => {
-      const functionNameMatch = code.match(/fn\s+(\w+)\s*\(/);
-      if (!functionNameMatch) return code;
-      const functionName = functionNameMatch[1];
-      const args = input.split(" ").join(", ");
-      return `
-fn main() {
-    println!("{}", ${functionName}(${args}));
-}
-${code}`;
-    },
-  },
-  {
     name: "cpp",
     id: 54, // C++ (GCC 9.2.0)
     ext: "cpp",

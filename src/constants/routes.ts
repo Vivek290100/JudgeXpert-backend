@@ -10,7 +10,9 @@ export const UserRoutes = {
   RESET_PASSWORD: "/reset-password",
   UPDATE_PROFILE: "/update-profile",
   GOOGLE_LOGIN: "/google-login",
-  REFRESH_TOKEN: "/auth/refresh-token"
+  REFRESH_TOKEN: "/auth/refresh-token",
+  CREATE_DISCUSSION: "/discussions",
+  GET_DISCUSSIONS: "/discussions/:problemId",
  
 } as const;
 
@@ -40,6 +42,8 @@ export const ProblemRoutes = {
 
   EXECUTE_CODE: "/execute",
 } as const;
+
+
 
 
 export type UserRouteKeys = keyof typeof UserRoutes;
