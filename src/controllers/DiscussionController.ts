@@ -1,4 +1,3 @@
-// Backend\src\controllers\DiscussionController.ts
 import { Request, Response } from "express";
 import { AuthRequest } from "../middlewares/authMiddleware";
 import { IDiscussionService } from "../interfaces/serviceInterfaces/IDiscussionService";
@@ -39,11 +38,42 @@ class DiscussionController {
     }
   }
 
+  async addReply(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
+      }
+
+      const { discussionId, message } = req.body;
+      if (!discussionId || !message) {
+        throw new BadRequestError(ErrorMessages.ALL_FIELDS_REQUIRED);
+      }
+
+      const discussion = await this.discussionService.addReply(
+        discussionId,
+        userId,
+        message
+      );
+
+      sendResponse(res, {
+        success: true,
+        status: StatusCode.CREATED,
+        message: "Reply added successfully",
+        data: { discussion },
+      });
+    } catch (error: any) {
+      handleError(res, error);
+    }
+  }
+
   async getDiscussions(req: Request, res: Response): Promise<void> {
     try {
       const { problemId } = req.params;
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
+      console.log("11111111",problemId,page,limit);
+      
 
       if (!problemId) {
         throw new BadRequestError(ErrorMessages.PROBLEM_ID_REQUIRED);
@@ -55,28 +85,25 @@ class DiscussionController {
           page,
           limit
         );
+
+        console.log("33333333",discussions,total,problemId,page,limit);
         
-        
-        console.log("888888888888888888",discussions);
-        sendResponse(res, {
-            success: true,
-            status: StatusCode.SUCCESS,
-            message: SuccessMessages.DISCUSSIONS_FETCHED,
-            data: {
-                discussions,
-                total,
-                totalPages: Math.ceil(total / limit),
-                currentPage: page,
-            },
-        });
+
+      sendResponse(res, {
+        success: true,
+        status: StatusCode.SUCCESS,
+        message: SuccessMessages.DISCUSSIONS_FETCHED,
+        data: {
+          discussions,
+          total,
+          totalPages: Math.ceil(total / limit),
+          currentPage: page,
+        },
+      });
     } catch (error: any) {
       handleError(res, error);
     }
   }
-
-
-
-
 }
 
 export default DiscussionController;

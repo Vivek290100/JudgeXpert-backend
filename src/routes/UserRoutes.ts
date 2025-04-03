@@ -24,7 +24,8 @@ userRouter
   .post(UserRoutes.REFRESH_TOKEN, userController.refreshToken.bind(userController))
 
   .post(UserRoutes.CREATE_DISCUSSION, authMiddleware, discussionController.createDiscussion.bind(discussionController))
-  .get(UserRoutes.GET_DISCUSSIONS,authMiddleware, discussionController.getDiscussions.bind(discussionController));
+  .get(UserRoutes.GET_DISCUSSIONS,authMiddleware, discussionController.getDiscussions.bind(discussionController))
+  .post(UserRoutes.ADD_REPLY, authMiddleware, discussionController.addReply.bind(discussionController));
 
 // Problem
 userRouter

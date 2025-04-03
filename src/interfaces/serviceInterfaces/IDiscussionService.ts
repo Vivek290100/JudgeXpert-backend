@@ -11,4 +11,9 @@ export interface IDiscussionService {
     page: number,
     limit: number
   ): Promise<{ discussions: IDiscussion[]; total: number }>;
+  addReply(
+    discussionId: string,
+    userId: string,
+    message: string
+  ): Promise<IDiscussion>;
 }

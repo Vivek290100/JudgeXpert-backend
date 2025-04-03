@@ -4,8 +4,7 @@ import Discussion from "../models/DiscussionModel";
 import BaseRepository from "./BaseRepository";
 import { IDiscussionRepository } from "../interfaces/repositoryInterfaces/IDiscussionRepository";
 
-class discussionRepository extends BaseRepository<IDiscussion> implements IDiscussionRepository
-{
+class DiscussionRepository extends BaseRepository<IDiscussion> implements IDiscussionRepository {
   constructor() {
     super(Discussion);
   }
@@ -21,7 +20,8 @@ class discussionRepository extends BaseRepository<IDiscussion> implements IDiscu
         .find(query)
         .skip(skip)
         .limit(limit)
-        .populate("userId", "userName fullName")
+        .populate("userId", "userName") // Populate username for main discussion
+        .populate("replies.userId", "userName") // Populate username for replies
         .sort({ createdAt: -1 })
         .lean()
         .exec(),
@@ -32,4 +32,4 @@ class discussionRepository extends BaseRepository<IDiscussion> implements IDiscu
   }
 }
 
-export default discussionRepository;
+export default DiscussionRepository;
