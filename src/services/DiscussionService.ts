@@ -5,7 +5,6 @@ import { IDiscussionService } from "../interfaces/serviceInterfaces/IDiscussionS
 import { IDiscussion } from "../types/IDiscussion";
 import { BadRequestError, ErrorMessages, NotFoundError } from "../utils/errors";
 
-// Backend\src\services\DiscussionService.ts
 class DiscussionService implements IDiscussionService {
   constructor(
     private discussionRepository: IDiscussionRepository,
@@ -31,10 +30,32 @@ class DiscussionService implements IDiscussionService {
       userId,
       message: message.trim(),
     };
-    console.log("dddddddd",discussionData);
-    
 
     return this.discussionRepository.create(discussionData);
+  }
+
+  async addReply(
+    discussionId: string,
+    userId: string,
+    message: string
+  ): Promise<IDiscussion> {
+    if (!discussionId || !userId || !message?.trim()) {
+      throw new BadRequestError(ErrorMessages.ALL_FIELDS_REQUIRED);
+    }
+
+    const discussion = await this.discussionRepository.findById(discussionId);
+    if (!discussion) {
+      throw new NotFoundError(ErrorMessages.DISCUSSION_NOT_FOUND);
+    }
+
+    const reply = {
+      userId,
+      message: message.trim(),
+      createdAt: new Date(),
+    };
+
+    discussion.replies.push(reply);
+    return discussion.save();
   }
 
   async getDiscussionsByProblemId(
@@ -47,17 +68,15 @@ class DiscussionService implements IDiscussionService {
     }
 
     const problem = await this.problemRepository.findById(problemId);
+    console.log("222222",problem);
+    
     if (!problem) {
       throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
     }
 
-    const query: FilterQuery<IDiscussion> = {
-      problemId,
-    };
-
+    const query: FilterQuery<IDiscussion> = { problemId };
     return this.discussionRepository.findPaginated(page, limit, query);
   }
-
 }
 
 export default DiscussionService;

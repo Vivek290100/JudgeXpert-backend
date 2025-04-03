@@ -13,6 +13,8 @@ export const UserRoutes = {
   REFRESH_TOKEN: "/auth/refresh-token",
   CREATE_DISCUSSION: "/discussions",
   GET_DISCUSSIONS: "/discussions/:problemId",
+  ADD_REPLY: "/discussions/reply", // New route for adding a reply
+
  
 } as const;
 
