@@ -5,6 +5,7 @@ import { handleError, sendResponse } from "../utils/responseUtils";
 import { StatusCode } from "../utils/statusCode";
 import { SuccessMessages } from "../utils/messages";
 import { BadRequestError, ErrorMessages } from "../utils/errors";
+import Discussion from "../models/DiscussionModel"; // Import the Discussion model for population
 
 class DiscussionController {
   constructor(private discussionService: IDiscussionService) {}
@@ -27,11 +28,20 @@ class DiscussionController {
         message
       );
 
+      // Populate the userId field before sending the response
+      const populatedDiscussion = await Discussion.findById(discussion._id)
+        .populate("userId", "userName profileImage")
+        .exec();
+
+      if (!populatedDiscussion) {
+        throw new Error("Failed to populate discussion");
+      }
+
       sendResponse(res, {
         success: true,
         status: StatusCode.CREATED,
         message: SuccessMessages.DISCUSSION_CREATED,
-        data: { discussion },
+        data: populatedDiscussion,
       });
     } catch (error: any) {
       handleError(res, error);
@@ -56,11 +66,23 @@ class DiscussionController {
         message
       );
 
+      // Populate the userId field for the newly added reply
+      const populatedDiscussion = await Discussion.findById(discussionId)
+        .populate("replies.userId", "userName profileImage")
+        .exec();
+
+      if (!populatedDiscussion) {
+        throw new Error("Failed to populate discussion");
+      }
+
+      // The newly added reply should be the last one in the replies array
+      const newReply = populatedDiscussion.replies[populatedDiscussion.replies.length - 1];
+
       sendResponse(res, {
         success: true,
         status: StatusCode.CREATED,
         message: "Reply added successfully",
-        data: { discussion },
+        data: newReply,
       });
     } catch (error: any) {
       handleError(res, error);
@@ -72,8 +94,6 @@ class DiscussionController {
       const { problemId } = req.params;
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
-      console.log("11111111",problemId,page,limit);
-      
 
       if (!problemId) {
         throw new BadRequestError(ErrorMessages.PROBLEM_ID_REQUIRED);
@@ -86,8 +106,7 @@ class DiscussionController {
           limit
         );
 
-        console.log("33333333",discussions,total,problemId,page,limit);
-        
+      console.log("33333333", discussions);
 
       sendResponse(res, {
         success: true,

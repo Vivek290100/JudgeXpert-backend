@@ -20,8 +20,8 @@ class DiscussionRepository extends BaseRepository<IDiscussion> implements IDiscu
         .find(query)
         .skip(skip)
         .limit(limit)
-        .populate("userId", "userName") // Populate username for main discussion
-        .populate("replies.userId", "userName") // Populate username for replies
+        .populate("userId", "userName profileImage")
+        .populate("replies.userId", "userName profileImage") // Add profileImage for replies
         .sort({ createdAt: -1 })
         .lean()
         .exec(),
