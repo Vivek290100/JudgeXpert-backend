@@ -1,60 +1,71 @@
+// Backend/src/utils/languages.ts
 export interface LanguageConfig {
-  name: string;         
-  aliases?: string[];    
-  id: number;             // Piston lang ID
-  ext: string;        
-  wrapper: (code: string, input: string) => string; // Function to wrap user code
+  name: string;
+  ext: string;
+  version: string;
+  wrapper: (code: string, input: string, functionName?: string) => string;
 }
 
-export const SUPPORTED_LANGUAGES: LanguageConfig[] = [
-  {
-    name: "javascript",
-    aliases: ["js"], 
-    id: 63, // Node 12.14.0
-    ext: "js",
-    wrapper: (code, input) => {
-      const functionNameMatch = code.match(/function\s+(\w+)\s*\(/);
-      if (!functionNameMatch) return code;
-      const functionName = functionNameMatch[1];
-      const args = input.split(" ").map((arg) => isNaN(+arg) ? `"${arg}"` : arg).join(", ");
-      return `${code}\nconsole.log(${functionName}(${args}));`;
-    },
-  },
-  {
-    name: "cpp",
-    id: 54, // C++ (GCC 9.2.0)
-    ext: "cpp",
-    wrapper: (code, input) => {
-      const functionNameMatch = code.match(/(int|void|string)\s+(\w+)\s*\(/);
-      if (!functionNameMatch) return code;
-      const functionName = functionNameMatch[2];
-      const args = input.split(" ").join(", ");
-      return `
-#include <iostream>
-#include <string>
-using namespace std;
+
+const javascriptWrapper = (code: string, input: string, functionName: string = 'solution') => {
+  const inputs = input.split('\n').map(val => {
+    try {
+      return JSON.parse(val);
+    } catch {
+      return isNaN(Number(val)) ? `"${val}"` : Number(val);
+    }
+  }).join(', ');
+  return `
 ${code}
-int main() {
-    cout << ${functionName}(${args}) << endl;
-    return 0;
-}`;
-    },
-  },
+try {
+  const result = ${functionName}(${inputs});
+  console.log(JSON.stringify(result));
+} catch (e) {
+  console.error(JSON.stringify({ error: e.message }));
+}
+  `;
+};
+
+const pythonWrapper = (code: string, input: string, functionName: string = 'solution') => {
+  const inputs = input.split('\n').map(val => {
+    try {
+      return JSON.parse(val);
+    } catch {
+      return isNaN(Number(val)) ? `"${val}"` : val;
+    }
+  }).map(val => JSON.stringify(val)).join(', ');
+  return `
+import json
+${code}
+try:
+    result = ${functionName}(${inputs})
+    print(json.dumps(result))
+except Exception as e:
+    print(json.dumps({"error": str(e)}), file=sys.stderr)
+  `;
+};
+
+
+const defaultWrapper = (code: string, input: string) => code;
+
+export const SUPPORTED_LANGUAGES: LanguageConfig[] = [
+  { name: "javascript", ext: "js", version: "18.15.0", wrapper: javascriptWrapper },
+  { name: "python", ext: "py", version: "3.10.0", wrapper: pythonWrapper },
+  { name: "cpp", ext: "cpp", version: "10.2.0", wrapper: defaultWrapper }, 
+  { name: "kotlin", ext: "kt", version: "1.8.20", wrapper: defaultWrapper },
+  { name: "ruby", ext: "rb", version: "3.0.1", wrapper: defaultWrapper },
+  { name: "go", ext: "go", version: "1.16.2", wrapper: defaultWrapper },
 ];
 
-export const getLanguageId = (languageName: string): number | null => {
-  const lang = SUPPORTED_LANGUAGES.find(
-    (l) => l.name === languageName.toLowerCase() || (l.aliases && l.aliases.includes(languageName.toLowerCase()))
-  );
-  return lang ? lang.id : null;
-};
-
-export const getLanguageConfig = (languageName: string): LanguageConfig | null => {
+export const getLanguageConfig = (language: string): LanguageConfig | undefined => {
   return SUPPORTED_LANGUAGES.find(
-    (l) => l.name === languageName.toLowerCase() || (l.aliases && l.aliases.includes(languageName.toLowerCase()))
-  ) || null;
+    (lang) => lang.name.toLowerCase() === language.toLowerCase()
+  );
 };
 
-export const validateLanguage = (languageName: string): boolean => {
-  return !!getLanguageId(languageName);
-};
+export function formatValueForExecution(value: any, type: string): string {
+  if (type.startsWith('array') || type === 'object') return JSON.stringify(value);
+  if (type === 'number') return Number(value).toString();
+  if (type === 'boolean') return value.toString();
+  return value.toString();
+}
