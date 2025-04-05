@@ -1,9 +1,6 @@
 import { Request, Response } from "express";
 import { filterProblemResponse, handleError, sendResponse } from "../utils/responseUtils";
 import { IProblemService } from "../interfaces/serviceInterfaces/IProblemService";
-import fs from "fs/promises";
-import path from "path";
-import { generateBoilerplateForProblem } from "../scripts/generateBoilerplate";
 import Problem from "../models/ProblemModel";
 import { AuthRequest } from "../middlewares/authMiddleware";
 import User from "../models/UserModel";
@@ -13,18 +10,19 @@ import { BadRequestError, ErrorMessages, NotFoundError } from "../utils/errors";
 import { IProblem } from "../types/IProblem";
 import { FilterQuery } from "mongoose";
 import { ISubmission } from "../types/ISubmission";
-
+import fs from "fs/promises";
+import path from "path";
 
 interface AdminAuthRequest extends AuthRequest {
-  user?: { userId: string; role?: string }; 
+  user?: { userId: string; role?: string };
 }
-
-
 
 class ProblemController {
   constructor(private problemService: IProblemService) {}
 
   async createProblem(req: Request, res: Response): Promise<void> {
+    console.log("controller for problem");
+    
     try {
       const { problemDir } = req.body;
       if (!problemDir || typeof problemDir !== "string") {
@@ -32,6 +30,8 @@ class ProblemController {
       }
 
       const problem = await this.problemService.createProblemFromFiles(problemDir);
+      console.log("Created problem:", problem);
+      
       if (!problem) {
         throw new NotFoundError(ErrorMessages.FAILED_TO_PROCESS_PROBLEM);
       }
@@ -43,6 +43,7 @@ class ProblemController {
         data: { problem: filterProblemResponse(problem) },
       });
     } catch (error: any) {
+      console.log("Error in createProblem:", error);
       handleError(res, error);
     }
   }
@@ -140,15 +141,18 @@ class ProblemController {
   }
 
   async processSpecificProblem(req: Request, res: Response): Promise<void> {
+    console.log("Processing specific problem request");
+    console.log("Request body:", req.body);
     try {
       const { problemDir } = req.body;
+      console.log("Problem directory:", problemDir);
       if (!problemDir || typeof problemDir !== "string") {
         throw new BadRequestError(ErrorMessages.PROBLEM_DIR_REQUIRED);
       }
 
       const problem = await this.problemService.processSpecificProblem(problemDir);
-      console.log("oooooo",problem);
-      
+      console.log("Processed problem:", problem);
+
       if (!problem) {
         throw new NotFoundError(ErrorMessages.FAILED_TO_PROCESS_PROBLEM);
       }
@@ -173,17 +177,14 @@ class ProblemController {
       const status = req.query.status as string;
       const solved = req.query.solved as string;
 
-      // Base query: Only filter out blocked problems for non-admins
       const query: FilterQuery<IProblem> = {};
       const userId = req.user?.userId;
-      const userRole = req.user?.role; // From adminMiddleware
+      const userRole = req.user?.role;
 
-      // For non-admins, exclude blocked problems
       if (userRole !== "admin") {
         query.isBlocked = { $ne: true };
       }
 
-      // Apply additional filters
       if (search) {
         query.$or = [
           { title: { $regex: search, $options: "i" } },
@@ -213,6 +214,7 @@ class ProblemController {
       }
 
       const { problems, total } = await this.problemService.getProblemsPaginated(page, limit, query);
+      // console.log("gggggggggggggggggggggggggggggggggggggggggggggggggggggggggg",problems)
 
       if (solved === "true" || solved === "false") {
         const solvedFilter = solved === "true";
@@ -281,12 +283,10 @@ class ProblemController {
 
   async generateAllBoilerplate(req: Request, res: Response): Promise<void> {
     try {
-      const basePath = process.env.PROBLEM_BASE_PATH || path.join(__dirname, "../problems");
-      const problemDirs = (await fs.readdir(basePath, { withFileTypes: true }))
-        .filter((dirent) => dirent.isDirectory())
-        .map((dirent) => dirent.name);
-
-      await Promise.all(problemDirs.map((problemDir) => generateBoilerplateForProblem(problemDir)));
+      const problems = await this.problemService.getProblemsPaginated(1, 1000);
+      for (const problem of problems.problems) {
+        await this.problemService.processSpecificProblem(problem.slug);
+      }
 
       sendResponse(res, {
         success: true,
@@ -306,7 +306,7 @@ class ProblemController {
         throw new BadRequestError(ErrorMessages.PROBLEM_DIR_REQUIRED);
       }
 
-      await generateBoilerplateForProblem(problemDir);
+      await this.problemService.processSpecificProblem(problemDir);
 
       sendResponse(res, {
         success: true,
@@ -424,15 +424,18 @@ class ProblemController {
 
   async executeCode(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const { problemId, language, code, isRunOnly = false } = req.body;
-      if (!problemId || !language || !code) {
-        throw new BadRequestError(ErrorMessages.EXECUTION_FIELDS_REQUIRED);
-      }
-  
+      const { problemId, language, code, isRunOnly = false } = req.body; // Extract code directly
       const userId = req.user?.userId;
+  
       if (!userId) {
         throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
       }
+  
+      if (!code) {
+        throw new BadRequestError("Code is required");
+      }
+  
+      console.log("pController", problemId, language, code, isRunOnly, userId);
   
       const { results, passed } = await this.problemService.executeCode(problemId, language, code, userId, isRunOnly);
   
@@ -453,19 +456,19 @@ class ProblemController {
       if (!userId) {
         throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
       }
-  
+
       const { problemSlug } = req.query;
       let slug: string | undefined;
-  
+
       if (problemSlug !== undefined) {
         if (typeof problemSlug !== "string") {
           throw new BadRequestError(ErrorMessages.INVALID_INPUT("problemSlug must be a string"));
         }
         slug = problemSlug;
       }
-  
+
       const submissions = await this.problemService.getUserSubmissions(userId, slug);
-  
+
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
@@ -486,8 +489,6 @@ class ProblemController {
       handleError(res, error);
     }
   }
-
-  
 }
 
 export default ProblemController;

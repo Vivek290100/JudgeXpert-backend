@@ -1,14 +1,13 @@
 import { IProblem } from "../types/IProblem";
 import { IProblemService } from "../interfaces/serviceInterfaces/IProblemService";
 import { IProblemRepository } from "../interfaces/repositoryInterfaces/IProblemRepository";
-import { ProblemDefinitionParser, FullProblemDefinitionParser } from "../utils/problemParsers";
 import fs from "fs/promises";
 import path from "path";
 import TestCase from "../models/TestCaseModel";
 import DefaultCode from "../models/DefaultCodeModel";
 import { Types } from "mongoose";
 import { FilterQuery, UpdateQuery } from "mongoose";
-import { SUPPORTED_LANGUAGES, getLanguageConfig, getLanguageId, validateLanguage } from "../utils/languages";
+import { formatValueForExecution, getLanguageConfig, SUPPORTED_LANGUAGES } from "../utils/languages";
 import axios from "axios";
 import { ExecutionResult } from "../types/IExecution";
 import { TestCaseResult } from "../types/ITestCaseResult";
@@ -21,170 +20,251 @@ class ProblemService implements IProblemService {
   constructor(private problemRepository: IProblemRepository) {}
 
   async createProblemFromFiles(problemDir: string): Promise<IProblem | null> {
+    console.log("Processing problem directory:", problemDir);
+
     const basePath = process.env.PROBLEM_BASE_PATH || path.join(__dirname, "../problems");
     const fullProblemDir = path.join(basePath, problemDir);
 
-    const structurePath = path.join(fullProblemDir, "Structure.md");
-    const problemPath = path.join(fullProblemDir, "Problem.md");
+    const structurePath = path.join(fullProblemDir, "structure.md");
+    const problemPath = path.join(fullProblemDir, "problem.md");
     const inputsDir = path.join(fullProblemDir, "inputs");
     const outputsDir = path.join(fullProblemDir, "outputs");
     const boilerplateDir = path.join(fullProblemDir, "boilerplate");
-    const boilerplateFullDir = path.join(fullProblemDir, "boilerplate-full");
 
-    await Promise.all([
-      fs.access(structurePath),
-      fs.access(problemPath),
-      fs.access(inputsDir),
-      fs.access(outputsDir),
-    ]).catch(() => {
+    // Validate directory structure
+    try {
+      await Promise.all([
+        fs.access(structurePath),
+        fs.access(problemPath),
+        fs.access(inputsDir),
+        fs.access(outputsDir),
+        fs.access(boilerplateDir),
+      ]);
+    } catch (error) {
+      console.error("Directory structure validation failed:", error);
       throw new BadRequestError(ErrorMessages.INVALID_PROBLEM_DIR_STRUCTURE(problemDir));
+    }
+
+    // Read structure and problem description
+    let description: string, structure: string;
+    try {
+      [description, structure] = await Promise.all([
+        fs.readFile(problemPath, "utf-8"),
+        fs.readFile(structurePath, "utf-8"),
+      ]);
+    } catch (error) {
+      console.error("Error reading structure.md or problem.md:", error);
+      throw new BadRequestError("Failed to read structure.md or problem.md");
+    }
+
+    // Normalize newlines and trim the structure content
+    structure = structure.replace(/\r\n/g, '\n').trim();
+
+    // Parse structure.md
+    const titleMatch = structure.match(/Problem Name: "(.+)"/);
+    const functionNameMatch = structure.match(/Function Name: (\w+)/);
+    const difficultyMatch = structure.match(/Difficulty: (\w+)/);
+
+    if (!titleMatch || !functionNameMatch || !difficultyMatch) {
+      console.error("Failed to parse structure.md: Missing required fields");
+      throw new BadRequestError("structure.md is missing required fields (Problem Name, Function Name, or Difficulty)");
+    }
+
+    const title = titleMatch[1] || path.basename(problemDir);
+    const functionName = functionNameMatch[1] || '';
+    const difficulty = difficultyMatch[1]?.toUpperCase() || 'MEDIUM';
+
+    // Parse input structure
+    const inputSectionMatch = structure.match(/## Input Structure\n([\s\S]+?)(?=\n##|\n$)/);
+    const inputSection = inputSectionMatch ? inputSectionMatch[1].trim() : '';
+    const inputFields = inputSection.split('- Input Field:').slice(1);
+    const inputStructure = inputFields.map((field, index) => {
+      const nameMatch = field.match(/^\s*(\w+)/m);
+      const typeMatch = field.match(/Type:\s*([\w<>\[\]]+)/);
+      if (!nameMatch || !typeMatch) {
+        console.error(`Invalid input structure in structure.md for field ${index}:`, field);
+        throw new BadRequestError(`Invalid input structure in structure.md for field ${index}`);
+      }
+      return { name: nameMatch[1], type: typeMatch[1] };
     });
 
-    const [description, structure] = await Promise.all([
-      fs.readFile(problemPath, "utf-8"),
-      fs.readFile(structurePath, "utf-8"),
-    ]);
-
-    const parser = new ProblemDefinitionParser();
-    parser.parse(structure);
-
-    const languages = SUPPORTED_LANGUAGES.map((lang) => lang.name);
-    let defaultCode: { language: string; code: string }[] = [];
-    let fullDefaultCode: { language: string; code: string }[] = [];
-
-    const boilerplateFiles = {
-      partial: languages.map((lang) => path.join(boilerplateDir, `function.${lang}`)),
-      full: languages.map((lang) => path.join(boilerplateFullDir, `function.${lang}`)),
-    };
-
-    await Promise.all([
-      fs.mkdir(boilerplateDir, { recursive: true }),
-      fs.mkdir(boilerplateFullDir, { recursive: true }),
-    ]);
-
-    for (const [index, lang] of languages.entries()) {
-      if (!validateLanguage(lang)) {
-        console.warn(ErrorMessages.UNSUPPORTED_LANGUAGE(lang));
-        continue;
+    // Parse output structure
+    const outputSectionMatch = structure.match(/## Output Structure\n([\s\S]+?)(?=\n##|\n$|$)/);
+    const outputSection = outputSectionMatch ? outputSectionMatch[1].trim() : '';
+    const outputFields = outputSection.split('- Output Field:').slice(1);
+    const outputStructure = outputFields.map((field, index) => {
+      const nameMatch = field.match(/^\s*(\w+)/m);
+      const typeMatch = field.match(/Type:\s*([\w<>\[\]]+)/);
+      if (!nameMatch || !typeMatch) {
+        console.error(`Invalid output structure in structure.md for field ${index}:`, field);
+        throw new BadRequestError(`Invalid output structure in structure.md for field ${index}`);
       }
+      return { name: nameMatch[1], type: typeMatch[1] };
+    });
 
-      const filePath = boilerplateFiles.partial[index];
-      try {
-        const code = await fs.readFile(filePath, "utf-8");
-        defaultCode.push({ language: lang, code });
-      } catch (error) {
-        console.log(`Partial boilerplate for ${lang} not found, generating...`);
-        const code = parser.generateCode(lang);
-        await fs.writeFile(filePath, code);
-        defaultCode.push({ language: lang, code });
-      }
+    // Parse test cases
+    let inputFiles: string[], outputFiles: string[];
+    try {
+      [inputFiles, outputFiles] = await Promise.all([
+        fs.readdir(inputsDir).then(files => files.sort()),
+        fs.readdir(outputsDir).then(files => files.sort()),
+      ]);
+    } catch (error) {
+      console.error("Error reading input/output directories:", error);
+      throw new BadRequestError("Failed to read input/output directories");
     }
-
-    const fullParser = new FullProblemDefinitionParser();
-    fullParser.parse(structure);
-    for (const [index, lang] of languages.entries()) {
-      if (!validateLanguage(lang)) {
-        console.warn(ErrorMessages.UNSUPPORTED_LANGUAGE(lang));
-        continue;
-      }
-
-      const filePath = boilerplateFiles.full[index];
-      try {
-        const code = await fs.readFile(filePath, "utf-8");
-        fullDefaultCode.push({ language: lang, code });
-      } catch (error) {
-        console.log(`Full boilerplate for ${lang} not found, generating...`);
-        const code = fullParser.generateCode(lang);
-        await fs.writeFile(filePath, code);
-        fullDefaultCode.push({ language: lang, code });
-      }
-    }
-
-    const testCases: { input: string; output: string; index: number }[] = [];
-    const [inputFiles, outputFiles] = await Promise.all([
-      fs.readdir(inputsDir).then((files) => files.sort()),
-      fs.readdir(outputsDir).then((files) => files.sort()),
-    ]);
 
     if (inputFiles.length !== outputFiles.length) {
+      console.error("Test case mismatch: Number of input files does not match number of output files");
       throw new BadRequestError(ErrorMessages.TEST_CASE_MISMATCH);
     }
 
+    const testCases: { inputs: { name: string; type: string; value: any }[]; outputs: { name: string; type: string; value: any }[]; index: number }[] = [];
     for (let i = 0; i < inputFiles.length; i++) {
-      const [input, output] = await Promise.all([
-        fs.readFile(path.join(inputsDir, inputFiles[i]), "utf-8").then((s) => s.trim()),
-        fs.readFile(path.join(outputsDir, outputFiles[i]), "utf-8").then((s) => s.trim()),
-      ]);
-      testCases.push({ input, output, index: i });
+      const testId = parseInt(inputFiles[i].split('.')[0]);
+      let inputContent: string, outputContent: string;
+      try {
+        [inputContent, outputContent] = await Promise.all([
+          fs.readFile(path.join(inputsDir, inputFiles[i]), "utf-8"),
+          fs.readFile(path.join(outputsDir, outputFiles[i]), "utf-8"),
+        ]);
+      } catch (error) {
+        console.error(`Error reading test case files for index ${testId}:`, error);
+        throw new BadRequestError(`Failed to read test case files for index ${testId}`);
+      }
+
+      const inputLines = inputContent.trim().split('\n');
+      if (inputLines.length !== inputStructure.length) {
+        console.error(`Test case ${testId} has incorrect number of inputs: expected ${inputStructure.length}, got ${inputLines.length}`);
+        throw new BadRequestError(`Test case ${testId} has incorrect number of inputs`);
+      }
+
+      const inputs = inputLines.map((value, idx) => ({
+        name: inputStructure[idx].name,
+        type: inputStructure[idx].type,
+        value: parseValue(value, inputStructure[idx].type),
+      }));
+
+      const outputLines = outputContent.trim().split('\n');
+      if (outputLines.length !== outputStructure.length) {
+        console.error(`Test case ${testId} has incorrect number of outputs: expected ${outputStructure.length}, got ${outputLines.length}`);
+        throw new BadRequestError(`Test case ${testId} has incorrect number of outputs`);
+      }
+
+      const outputs = outputLines.map((value, idx) => ({
+        name: outputStructure[idx].name,
+        type: outputStructure[idx].type,
+        value: parseValue(value, outputStructure[idx].type),
+      }));
+
+      testCases.push({ inputs, outputs, index: testId });
     }
 
+    // Create or update the Problem
+    const slug = path.basename(problemDir).toLowerCase().replace(/\./g, '-');
     const problemData: Partial<IProblem> = {
-      title: parser.problemName || path.basename(problemDir),
+      title,
       description,
-      difficulty: "MEDIUM",
-      slug: path.basename(problemDir).toLowerCase().replace(/\s+/g, "-"),
+      difficulty: difficulty as "EASY" | "MEDIUM" | "HARD",
+      slug,
+      functionName,
+      inputStructure,
+      outputStructure,
       status: "free",
       memory: 256,
       time: 1000,
-      updatedAt: new Date(),
       isBlocked: false,
-      solvedCount: 0
+      solvedCount: 0,
     };
 
-    const query: FilterQuery<IProblem> = { slug: problemData.slug! };
-    const update: UpdateQuery<IProblem> = { $set: problemData };
-    const options = { upsert: true, new: true };
+    let problem: IProblem | null;
+    try {
+      const query: FilterQuery<IProblem> = { slug };
+      const update: UpdateQuery<IProblem> = { $set: problemData };
+      const options = { upsert: true, new: true };
+      problem = await this.problemRepository.upsertProblem(query, update, options);
+      if (!problem?._id) {
+        throw new NotFoundError(ErrorMessages.FAILED_TO_PROCESS_PROBLEM);
+      }
+    } catch (error) {
+      throw new BadRequestError("Failed to save problem to database");
+    }
 
-    const problem = await this.problemRepository.upsertProblem(query, update, options);
-    if (!problem?._id) {
+    // Save test cases
+    const testCaseIds: Types.ObjectId[] = [];
+    try {
+      for (const testCase of testCases) {
+        const newTestCase = new TestCase({
+          problemId: problem._id,
+          inputs: testCase.inputs,
+          outputs: testCase.outputs,
+          index: testCase.index,
+          status: "active",
+        });
+        const savedTestCase = await newTestCase.save();
+        testCaseIds.push(savedTestCase._id);
+      }
+    } catch (error) {
+      console.error("Error saving test cases to database:", error);
+      throw new BadRequestError("Failed to save test cases to database");
+    }
+
+    // Process boilerplate files
+    const defaultCodeIds: Types.ObjectId[] = [];
+    try {
+      const boilerplateFiles = await fs.readdir(boilerplateDir);
+      if (boilerplateFiles.length === 0) {
+        console.warn(`No boilerplate files found in directory: ${boilerplateDir}`);
+      }
+
+      for (const file of boilerplateFiles) {
+        const filePath = path.join(boilerplateDir, file);
+        const fileContent = await fs.readFile(filePath, "utf-8");
+
+        const ext = path.extname(file).slice(1); // e.g., "cpp", "java"
+        const languageConfig = SUPPORTED_LANGUAGES.find(lang => lang.ext === ext);
+
+        if (!languageConfig) {
+          console.warn(`Unsupported language extension "${ext}" for file ${file}. Skipping...`);
+          continue;
+        }
+
+        const defaultCode = new DefaultCode({
+          languageName: languageConfig.name,
+          problemId: problem._id,
+          code: fileContent,
+          status: "active",
+        });
+
+        const savedDefaultCode = await defaultCode.save();
+        defaultCodeIds.push(savedDefaultCode._id);
+      }
+    } catch (error) {
+      console.error("Error processing boilerplate files:", error);
+      throw new BadRequestError(`Failed to process boilerplate files in directory ${boilerplateDir}: ${(error as Error).message}`);
+    }
+
+    // Update problem with testCaseIds and defaultCodeIds
+    try {
+      await this.problemRepository.upsertProblem(
+        { _id: problem._id },
+        { $set: { testCaseIds, defaultCodeIds } },
+        { new: true }
+      );
+    } catch (error) {
+      console.error("Error updating problem with testCaseIds and defaultCodeIds:", error);
+      throw new BadRequestError("Failed to update problem with testCaseIds and defaultCodeIds");
+    }
+
+    // Fetch the updated problem
+    const updatedProblem = await this.problemRepository.findById(problem._id.toString());
+    if (!updatedProblem) {
+      console.error("Failed to fetch updated problem after processing");
       throw new NotFoundError(ErrorMessages.FAILED_TO_PROCESS_PROBLEM);
     }
 
-    const testCaseIds: Types.ObjectId[] = [];
-    for (const testCase of testCases) {
-      const newTestCase = new TestCase({
-        problemId: problem._id,
-        input: testCase.input,
-        output: testCase.output,
-        index: testCase.index,
-        status: "active",
-      });
-      const savedTestCase = await newTestCase.save();
-      testCaseIds.push(savedTestCase._id);
-    }
-
-    const defaultCodeIds: Types.ObjectId[] = [];
-    for (const code of defaultCode) {
-      const languageId = getLanguageId(code.language);
-      if (!languageId) {
-        throw new BadRequestError(ErrorMessages.UNSUPPORTED_LANGUAGE(code.language));
-      }
-      const languageName = SUPPORTED_LANGUAGES.find((lang) => lang.id === languageId)?.name || "Unknown";
-
-      const newDefaultCode = new DefaultCode({
-        languageId,
-        languageName,
-        problemId: problem._id,
-        code: code.code.replace("##USER_CODE_HERE##", ""),
-        status: "active",
-      });
-      const savedDefaultCode = await newDefaultCode.save();
-      defaultCodeIds.push(savedDefaultCode._id);
-    }
-
-    await this.problemRepository.upsertProblem(
-      { _id: problem._id },
-      { $set: { testCaseIds, defaultCodeIds } },
-      { new: true }
-    );
-
-    // try {
-    //   await fs.rm(fullProblemDir, { recursive: true });
-    // } catch (error) {
-    //   console.error(`Failed to delete problem directory ${problemDir}:`, error);
-    // }
-
-    return problem;
+    console.log("Final problem:", updatedProblem);
+    return updatedProblem;
   }
 
   async getProblemById(id: string): Promise<IProblem | null> {
@@ -216,6 +296,7 @@ class ProblemService implements IProblemService {
   }
 
   async processSpecificProblem(problemDir: string): Promise<IProblem | null> {
+    console.log("Processing specific problem:", problemDir);
     return await this.createProblemFromFiles(problemDir);
   }
 
@@ -292,29 +373,65 @@ class ProblemService implements IProblemService {
   
     const PISTON_API_URL = process.env.PISTON_API_URL || "https://emkc.org/api/v2/piston/execute";
     const results: TestCaseResult[] = [];
-  
     const testCasesToRun = isRunOnly ? testCases.slice(0, 2) : testCases;
+    const functionName = problem.functionName || 'solution';
   
     for (const testCase of testCasesToRun) {
       try {
-        const executableCode = langConfig.wrapper(code, testCase.input);
+        const inputValues = testCase.inputs.map(input =>
+          formatValueForExecution(input.value, input.type)
+        ).join('\n');
+  
+        const executableCode = langConfig.wrapper(code, inputValues, functionName);
+  
+        console.log("mmmmmmmm", 
+          langConfig.name, 
+          langConfig.version, 
+          langConfig.wrapper.length, 
+          langConfig.ext,
+          executableCode,
+          inputValues);
+  
         const response = await axios.post<ExecutionResult>(PISTON_API_URL, {
           language: langConfig.name,
-          version: "*",
+          version: langConfig.version,
           files: [{ name: `main.${langConfig.ext}`, content: executableCode }],
-          stdin: testCase.input,
+          // stdin not needed since wrapper embeds inputs
         });
   
+        console.log("wwwwwwww", response.data);
+  
         const { stdout, stderr, code: exitCode } = response.data.run;
-        const output = stdout.trim();
-        const expected = testCase.output.trim();
-        const passed = output === expected && exitCode === 0;
+        let outputLines: string[];
+        try {
+          const parsedOutput = JSON.parse(stdout.trim());
+          outputLines = [formatValueForExecution(parsedOutput, testCase.outputs[0].type)];
+        } catch {
+          outputLines = stdout.trim().split('\n').filter(line => line.trim());
+        }
+  
+        const expectedLines = testCase.outputs.map(output =>
+          formatValueForExecution(output.value, output.type)
+        );
+  
+        console.log("outputLines", outputLines);
+        console.log("expectedLines", expectedLines);
+  
+        const passed =
+          outputLines.length === expectedLines.length &&
+          outputLines.every((out, idx) => {
+            const expected = expectedLines[idx];
+            return typeof out === 'string' && typeof expected === 'string'
+              ? out.trim() === expected.trim()
+              : JSON.stringify(out) === JSON.stringify(expected);
+          }) &&
+          exitCode === 0;
   
         results.push({
           testCaseIndex: testCase.index,
-          input: testCase.input,
-          expectedOutput: expected,
-          actualOutput: output,
+          input: inputValues,
+          expectedOutput: expectedLines.join('\n'),
+          actualOutput: outputLines.join('\n'),
           stderr: stderr.trim(),
           passed,
         });
@@ -322,10 +439,14 @@ class ProblemService implements IProblemService {
         console.error(`Error executing test case ${testCase.index}:`, error);
         results.push({
           testCaseIndex: testCase.index,
-          input: testCase.input,
-          expectedOutput: testCase.output,
+          input: testCase.inputs.map(input =>
+            formatValueForExecution(input.value, input.type)
+          ).join('\n'),
+          expectedOutput: testCase.outputs.map(output =>
+            formatValueForExecution(output.value, output.type)
+          ).join('\n'),
           actualOutput: "",
-          stderr: "Execution failed",
+          stderr: error instanceof Error ? error.message : "Execution failed",
           passed: false,
         });
       }
@@ -333,7 +454,6 @@ class ProblemService implements IProblemService {
   
     const allPassed = results.every((r) => r.passed);
   
-    // Save submission to database only for "Submit" actions (isRunOnly === false)
     if (!isRunOnly) {
       const submission = new Submission({
         userId,
@@ -345,24 +465,29 @@ class ProblemService implements IProblemService {
       });
       await submission.save();
   
-      // If the submission passed, update user stats only if the problem hasn't been solved before
       if (allPassed) {
         const user = await User.findById(userId).select("solvedProblems");
         if (!user) throw new NotFoundError(ErrorMessages.USER_NOT_FOUND);
   
-        const isAlreadySolved = user.solvedProblems.some((id) => id.toString() === problemId);
+        const isAlreadySolved = user.solvedProblems.some(id => id.toString() === problemId);
         if (!isAlreadySolved) {
           await User.findByIdAndUpdate(userId, {
             $inc: { problemsSolved: 1 },
             $addToSet: { solvedProblems: problemId },
           });
-          await this.problemRepository.update(problemId, { $inc: { solvedCount: 1 } });
+          await this.problemRepository.update(problemId, {
+            $inc: { solvedCount: 1 },
+          });
         }
       }
     }
   
     return { results, passed: allPassed };
   }
+
+  
+  
+
   async incrementSolvedCount(problemId: string): Promise<IProblem | null> {
     const problem = await this.problemRepository.findById(problemId);
     if (!problem) throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
@@ -371,7 +496,7 @@ class ProblemService implements IProblemService {
 
   async getUserSubmissions(userId: string, problemSlug?: string): Promise<ISubmission[]> {
     const query: FilterQuery<ISubmission> = { userId };
-  
+
     if (problemSlug) {
       const problem = await this.problemRepository.findBySlug(problemSlug);
       if (!problem) {
@@ -379,15 +504,50 @@ class ProblemService implements IProblemService {
       }
       query.problemId = problem._id.toString();
     }
-  
+
     const submissions = await Submission.find(query)
       .populate("problemId", "title slug")
       .sort({ submittedAt: -1 })
       .lean()
       .exec();
-  
+
     return submissions;
   }
 }
+
+function parseValue(value: string, type: string): any {
+  try {
+    value = value.trim();
+    if (type === 'int' || type === 'integer') return parseInt(value);
+    if (type === 'boolean') return value.toLowerCase() === 'true';
+    if (type === 'string') return value;
+
+    if (type.startsWith('array<')) {
+      const innerType = type.replace('array<', '').replace('>', '');
+      const arrayValues = JSON.parse(value);
+      if (!Array.isArray(arrayValues)) {
+        throw new Error('Invalid array format');
+      }
+
+      return arrayValues.map((item) => {
+        if (innerType === 'integer' || innerType === 'int') return parseInt(item);
+        if (innerType === 'boolean') return item.toString().toLowerCase() === 'true';
+        if (innerType === 'string') return item.toString();
+        throw new Error(`Unsupported array inner type: ${innerType}`);
+      });
+    }
+
+    return value;
+  } catch (error) {
+    console.error("Error parsing value:", { value, type, error });
+    throw new Error(`Failed to parse value: ${value} as type ${type}`);
+  }
+
+  
+}
+
+
+
+
 
 export default ProblemService;
