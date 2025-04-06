@@ -1,7 +1,7 @@
 // Backend\src\routes\UserRoutes.ts
 import { Router } from "express";
 import authMiddleware from "../middlewares/authMiddleware";
-import { ProblemRoutes, UserRoutes } from "../constants/routes";
+import { ProblemRoutes, UserRoutes } from "../utils/constants";
 import {Dependencies} from "../utils/dependencies"
 import { upload } from "../utils/multer";
 

@@ -384,15 +384,12 @@ class ProblemService implements IProblemService {
   
         const executableCode = langConfig.wrapper(code, inputValues, functionName, problem.inputStructure);
   
-        console.log("mmmmmmmm", langConfig.name, langConfig.version, langConfig.wrapper.length, langConfig.ext, executableCode, inputValues);
-  
         const response = await axios.post<ExecutionResult>(PISTON_API_URL, {
           language: langConfig.name,
           version: langConfig.version,
           files: [{ name: `main.${langConfig.ext}`, content: executableCode }],
         });
   
-        console.log("wwwwwwww", response.data);
   
         const { stdout, stderr, code: exitCode } = response.data.run;
         let outputLines: string[];
@@ -409,8 +406,6 @@ class ProblemService implements IProblemService {
           formatValueForExecution(output.value, output.type)
         );
   
-        console.log("outputLines", outputLines);
-        console.log("expectedLines", expectedLines);
   
         const passed =
           outputLines.length === expectedLines.length &&
@@ -479,8 +474,6 @@ class ProblemService implements IProblemService {
   }
 
   
-  
-
   async incrementSolvedCount(problemId: string): Promise<IProblem | null> {
     const problem = await this.problemRepository.findById(problemId);
     if (!problem) throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
@@ -533,9 +526,5 @@ function parseValue(value: string, type: string): any {
     throw new Error(`Failed to parse value: ${value} as type ${type}`);
   }
 }
-
-
-
-
 
 export default ProblemService;

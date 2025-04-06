@@ -21,8 +21,6 @@ class ProblemController {
   constructor(private problemService: IProblemService) {}
 
   async createProblem(req: Request, res: Response): Promise<void> {
-    console.log("controller for problem");
-    
     try {
       const { problemDir } = req.body;
       if (!problemDir || typeof problemDir !== "string") {
@@ -30,8 +28,6 @@ class ProblemController {
       }
 
       const problem = await this.problemService.createProblemFromFiles(problemDir);
-      console.log("Created problem:", problem);
-      
       if (!problem) {
         throw new NotFoundError(ErrorMessages.FAILED_TO_PROCESS_PROBLEM);
       }
@@ -142,16 +138,13 @@ class ProblemController {
 
   async processSpecificProblem(req: Request, res: Response): Promise<void> {
     console.log("Processing specific problem request");
-    console.log("Request body:", req.body);
     try {
       const { problemDir } = req.body;
-      console.log("Problem directory:", problemDir);
       if (!problemDir || typeof problemDir !== "string") {
         throw new BadRequestError(ErrorMessages.PROBLEM_DIR_REQUIRED);
       }
 
       const problem = await this.problemService.processSpecificProblem(problemDir);
-      console.log("Processed problem:", problem);
 
       if (!problem) {
         throw new NotFoundError(ErrorMessages.FAILED_TO_PROCESS_PROBLEM);
@@ -214,7 +207,6 @@ class ProblemController {
       }
 
       const { problems, total } = await this.problemService.getProblemsPaginated(page, limit, query);
-      // console.log("gggggggggggggggggggggggggggggggggggggggggggggggggggggggggg",problems)
 
       if (solved === "true" || solved === "false") {
         const solvedFilter = solved === "true";
@@ -424,7 +416,7 @@ class ProblemController {
 
   async executeCode(req: AuthRequest, res: Response): Promise<void> {
     try {
-      const { problemId, language, code, isRunOnly = false } = req.body; // Extract code directly
+      const { problemId, language, code, isRunOnly = false } = req.body;
       const userId = req.user?.userId;
   
       if (!userId) {
@@ -434,8 +426,6 @@ class ProblemController {
       if (!code) {
         throw new BadRequestError("Code is required");
       }
-  
-      console.log("pController", problemId, language, code, isRunOnly, userId);
   
       const { results, passed } = await this.problemService.executeCode(problemId, language, code, userId, isRunOnly);
   

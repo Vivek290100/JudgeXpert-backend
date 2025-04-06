@@ -1,6 +1,6 @@
 // Backend\src\routes\AdminRoutes.ts
 import { Router } from "express";
-import { AdminRoutes } from "../constants/routes";
+import { AdminRoutes } from "../utils/constants";
 import { Dependencies } from "../utils/dependencies";
 import adminMiddleware from "../middlewares/adminMiddleware";
 
