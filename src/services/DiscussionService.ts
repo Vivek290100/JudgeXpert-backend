@@ -4,7 +4,6 @@ import { IProblemRepository } from "../interfaces/repositoryInterfaces/IProblemR
 import { IDiscussionService } from "../interfaces/serviceInterfaces/IDiscussionService";
 import { IDiscussion } from "../types/IDiscussion";
 import { BadRequestError, ErrorMessages, NotFoundError } from "../utils/errors";
-import Discussion from "../models/DiscussionModel";
 
 class DiscussionService implements IDiscussionService {
   constructor(
@@ -26,24 +25,11 @@ class DiscussionService implements IDiscussionService {
       throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
     }
 
-    const discussionData: Partial<IDiscussion> = {
+    return this.discussionRepository.createAndPopulate({
       problemId,
       userId,
       message: message.trim(),
-    };
-
-    const discussion = await this.discussionRepository.create(discussionData);
-
-    // Populate the userId field before returning
-    const populatedDiscussion = await Discussion.findById(discussion._id)
-      .populate("userId", "userName profileImage")
-      .exec();
-
-    if (!populatedDiscussion) {
-      throw new NotFoundError(ErrorMessages.DISCUSSION_NOT_FOUND);
-    }
-
-    return populatedDiscussion;
+    });
   }
 
   async addReply(
@@ -55,30 +41,11 @@ class DiscussionService implements IDiscussionService {
       throw new BadRequestError(ErrorMessages.ALL_FIELDS_REQUIRED);
     }
 
-    const discussion = await this.discussionRepository.findById(discussionId);
-    if (!discussion) {
-      throw new NotFoundError(ErrorMessages.DISCUSSION_NOT_FOUND);
-    }
-
-    const reply = {
+    return this.discussionRepository.addReplyAndPopulate(
+      discussionId,
       userId,
-      message: message.trim(),
-      createdAt: new Date(),
-    };
-
-    discussion.replies.push(reply);
-    const updatedDiscussion = await discussion.save();
-
-    // Populate the replies.userId field before returning
-    const populatedDiscussion = await Discussion.findById(discussionId)
-      .populate("replies.userId", "userName profileImage")
-      .exec();
-
-    if (!populatedDiscussion) {
-      throw new NotFoundError(ErrorMessages.DISCUSSION_NOT_FOUND);
-    }
-
-    return populatedDiscussion;
+      message.trim()
+    );
   }
 
   async getDiscussionsByProblemId(

@@ -8,4 +8,14 @@ export interface IDiscussionRepository extends IBaseRepository<IDiscussion & Doc
     limit: number,
     query: FilterQuery<IDiscussion>
   ): Promise<{ discussions: IDiscussion[]; total: number }>;
+
+  createAndPopulate(
+    data: Partial<IDiscussion>
+  ): Promise<IDiscussion>;
+
+  addReplyAndPopulate(
+    discussionId: string,
+    userId: string,
+    message: string
+  ): Promise<IDiscussion>;
 }

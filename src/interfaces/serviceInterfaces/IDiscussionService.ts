@@ -6,11 +6,13 @@ export interface IDiscussionService {
     userId: string,
     message: string
   ): Promise<IDiscussion>;
+
   getDiscussionsByProblemId(
     problemId: string,
     page: number,
     limit: number
   ): Promise<{ discussions: IDiscussion[]; total: number }>;
+
   addReply(
     discussionId: string,
     userId: string,
