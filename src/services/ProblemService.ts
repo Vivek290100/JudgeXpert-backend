@@ -382,21 +382,14 @@ class ProblemService implements IProblemService {
           formatValueForExecution(input.value, input.type)
         ).join('\n');
   
-        const executableCode = langConfig.wrapper(code, inputValues, functionName);
+        const executableCode = langConfig.wrapper(code, inputValues, functionName, problem.inputStructure);
   
-        console.log("mmmmmmmm", 
-          langConfig.name, 
-          langConfig.version, 
-          langConfig.wrapper.length, 
-          langConfig.ext,
-          executableCode,
-          inputValues);
+        console.log("mmmmmmmm", langConfig.name, langConfig.version, langConfig.wrapper.length, langConfig.ext, executableCode, inputValues);
   
         const response = await axios.post<ExecutionResult>(PISTON_API_URL, {
           language: langConfig.name,
           version: langConfig.version,
           files: [{ name: `main.${langConfig.ext}`, content: executableCode }],
-          // stdin not needed since wrapper embeds inputs
         });
   
         console.log("wwwwwwww", response.data);
@@ -405,7 +398,9 @@ class ProblemService implements IProblemService {
         let outputLines: string[];
         try {
           const parsedOutput = JSON.parse(stdout.trim());
-          outputLines = [formatValueForExecution(parsedOutput, testCase.outputs[0].type)];
+          outputLines = testCase.outputs.map((output, idx) =>
+            formatValueForExecution(Array.isArray(parsedOutput) ? parsedOutput[idx] : parsedOutput, output.type)
+          );
         } catch {
           outputLines = stdout.trim().split('\n').filter(line => line.trim());
         }
@@ -421,9 +416,13 @@ class ProblemService implements IProblemService {
           outputLines.length === expectedLines.length &&
           outputLines.every((out, idx) => {
             const expected = expectedLines[idx];
-            return typeof out === 'string' && typeof expected === 'string'
-              ? out.trim() === expected.trim()
-              : JSON.stringify(out) === JSON.stringify(expected);
+            const outType = testCase.outputs[idx].type;
+            const expectedType = testCase.outputs[idx].type;
+            if (outType.startsWith('array<') && expectedType.startsWith('array<')) {
+              const normalizeArray = (arrStr: string) => JSON.stringify(JSON.parse(arrStr).sort((a: any, b: any) => a - b));
+              return normalizeArray(out) === normalizeArray(expected); // Order-independent for now
+            }
+            return out.trim() === expected.trim();
           }) &&
           exitCode === 0;
   
@@ -439,12 +438,8 @@ class ProblemService implements IProblemService {
         console.error(`Error executing test case ${testCase.index}:`, error);
         results.push({
           testCaseIndex: testCase.index,
-          input: testCase.inputs.map(input =>
-            formatValueForExecution(input.value, input.type)
-          ).join('\n'),
-          expectedOutput: testCase.outputs.map(output =>
-            formatValueForExecution(output.value, output.type)
-          ).join('\n'),
+          input: testCase.inputs.map(input => formatValueForExecution(input.value, input.type)).join('\n'),
+          expectedOutput: testCase.outputs.map(output => formatValueForExecution(output.value, output.type)).join('\n'),
           actualOutput: "",
           stderr: error instanceof Error ? error.message : "Execution failed",
           passed: false,
@@ -475,9 +470,7 @@ class ProblemService implements IProblemService {
             $inc: { problemsSolved: 1 },
             $addToSet: { solvedProblems: problemId },
           });
-          await this.problemRepository.update(problemId, {
-            $inc: { solvedCount: 1 },
-          });
+          await this.problemRepository.update(problemId, { $inc: { solvedCount: 1 } });
         }
       }
     }
@@ -525,10 +518,7 @@ function parseValue(value: string, type: string): any {
     if (type.startsWith('array<')) {
       const innerType = type.replace('array<', '').replace('>', '');
       const arrayValues = JSON.parse(value);
-      if (!Array.isArray(arrayValues)) {
-        throw new Error('Invalid array format');
-      }
-
+      if (!Array.isArray(arrayValues)) throw new Error('Invalid array format');
       return arrayValues.map((item) => {
         if (innerType === 'integer' || innerType === 'int') return parseInt(item);
         if (innerType === 'boolean') return item.toString().toLowerCase() === 'true';
@@ -542,8 +532,6 @@ function parseValue(value: string, type: string): any {
     console.error("Error parsing value:", { value, type, error });
     throw new Error(`Failed to parse value: ${value} as type ${type}`);
   }
-
-  
 }
 
 
