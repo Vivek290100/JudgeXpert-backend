@@ -12,6 +12,7 @@ export interface ISubmission {
   passed: boolean;
   submittedAt: Date;
   isRunOnly: boolean;
+  executionTime: number;
   createdAt?: Date;
   updatedAt?: Date;
 }

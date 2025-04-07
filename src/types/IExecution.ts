@@ -3,6 +3,7 @@ export interface ExecutionResult {
       stdout: string;
       stderr: string;
       code: number;
+      time: number;
     };
   }
 
