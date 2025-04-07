@@ -1,6 +1,7 @@
 import { IProblem } from "../../types/IProblem";
 import { FilterQuery, UpdateQuery } from "mongoose";
 import { ISubmission } from "../../types/ISubmission";
+import { TestCaseResult } from "../../types/ITestCaseResult";
 
 export interface IProblemService {
   createProblemFromFiles(problemDir: string): Promise<IProblem | null>;
@@ -12,7 +13,16 @@ export interface IProblemService {
   updateProblem(id: string, updates: UpdateQuery<IProblem>): Promise<IProblem | null>;
   blockProblem(id: string): Promise<IProblem | null>;
   unblockProblem(id: string): Promise<IProblem | null>;
-  executeCode(problemId: string, language: string, code: string, userId: string, isRunOnly: boolean): Promise<{ results: any[]; passed: boolean }>;
-  countProblems(query?: FilterQuery<IProblem>): Promise<number>;
+  executeCode(
+    problemId: string,
+    language: string,
+    code: string,
+    userId: string,
+    isRunOnly: boolean
+  ): Promise<{
+    results: TestCaseResult[];
+    passed: boolean;
+    executionTime: number;   
+  }>;  countProblems(query?: FilterQuery<IProblem>): Promise<number>;
   getUserSubmissions(userId: string, problemSlug?: string): Promise<ISubmission[]>;
 }

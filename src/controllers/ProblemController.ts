@@ -414,31 +414,39 @@ class ProblemController {
     }
   }
 
-  async executeCode(req: AuthRequest, res: Response): Promise<void> {
-    try {
-      const { problemId, language, code, isRunOnly = false } = req.body;
-      const userId = req.user?.userId;
-  
-      if (!userId) {
-        throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
-      }
-  
-      if (!code) {
-        throw new BadRequestError("Code is required");
-      }
-  
-      const { results, passed } = await this.problemService.executeCode(problemId, language, code, userId, isRunOnly);
-  
-      sendResponse(res, {
-        success: true,
-        status: StatusCode.SUCCESS,
-        message: passed ? SuccessMessages.CODE_EXECUTION_PASSED : SuccessMessages.CODE_EXECUTION_FAILED,
-        data: { results },
-      });
-    } catch (error: any) {
-      handleError(res, error);
+async executeCode(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { problemId, language, code, isRunOnly = false } = req.body;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
     }
+
+    if (!code) {
+      throw new BadRequestError("Code is required");
+    }
+
+    const { results, passed, executionTime } = await this.problemService.executeCode(
+      problemId,
+      language,
+      code,
+      userId,
+      isRunOnly
+    );
+    console.log("ppppppppppppppppppppppppppppp",executionTime);
+    
+
+    sendResponse(res, {
+      success: true,
+      status: StatusCode.SUCCESS,
+      message: passed ? SuccessMessages.CODE_EXECUTION_PASSED : SuccessMessages.CODE_EXECUTION_FAILED,
+      data: { results, executionTime },
+    });
+  } catch (error: any) {
+    handleError(res, error);
   }
+}
 
   async getUserSubmissions(req: AuthRequest, res: Response): Promise<void> {
     try {
@@ -458,6 +466,8 @@ class ProblemController {
       }
 
       const submissions = await this.problemService.getUserSubmissions(userId, slug);
+      console.log("ttttttttttttttttttt",submissions);
+      
 
       sendResponse(res, {
         success: true,
@@ -472,6 +482,7 @@ class ProblemController {
             totalTestCases: sub.results.length,
             code: sub.code,
             createdAt: sub.submittedAt.toISOString(),
+            executionTime: sub.executionTime,
           })),
         },
       });

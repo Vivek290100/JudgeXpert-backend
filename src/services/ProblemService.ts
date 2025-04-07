@@ -361,7 +361,11 @@ class ProblemService implements IProblemService {
     code: string,
     userId: string,
     isRunOnly: boolean = false
-  ): Promise<{ results: TestCaseResult[]; passed: boolean }> {
+  ): Promise<{
+    results: TestCaseResult[];
+    passed: boolean;
+    executionTime: number;
+  }> {
     const problem = await this.problemRepository.findById(problemId);
     if (!problem) throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
   
@@ -372,54 +376,56 @@ class ProblemService implements IProblemService {
     if (!testCases.length) throw new NotFoundError(ErrorMessages.NO_ACTIVE_TEST_CASES);
   
     const PISTON_API_URL = process.env.PISTON_API_URL || "https://emkc.org/api/v2/piston/execute";
-    const results: TestCaseResult[] = [];
     const testCasesToRun = isRunOnly ? testCases.slice(0, 2) : testCases;
     const functionName = problem.functionName || 'solution';
   
+    const results: TestCaseResult[] = [];
+    let totalExecutionTime = 0;
+    let maxMemoryUsed = 0;
+  
     for (const testCase of testCasesToRun) {
       try {
-        const inputValues = testCase.inputs.map(input =>
-          formatValueForExecution(input.value, input.type)
-        ).join('\n');
-  
+        const inputValues = testCase.inputs.map(i => formatValueForExecution(i.value, i.type)).join('\n');
         const executableCode = langConfig.wrapper(code, inputValues, functionName, problem.inputStructure);
   
+        const start = Date.now();
         const response = await axios.post<ExecutionResult>(PISTON_API_URL, {
           language: langConfig.name,
           version: langConfig.version,
           files: [{ name: `main.${langConfig.ext}`, content: executableCode }],
+          timeLimit: problem.time / 1000,
+          memoryLimit: problem.memory,
         });
+        const duration = Date.now() - start;
   
+        totalExecutionTime += duration;
   
         const { stdout, stderr, code: exitCode } = response.data.run;
+  
         let outputLines: string[];
         try {
-          const parsedOutput = JSON.parse(stdout.trim());
-          outputLines = testCase.outputs.map((output, idx) =>
-            formatValueForExecution(Array.isArray(parsedOutput) ? parsedOutput[idx] : parsedOutput, output.type)
+          const parsed = JSON.parse(stdout.trim());
+          outputLines = testCase.outputs.map((o, i) =>
+            formatValueForExecution(Array.isArray(parsed) ? parsed[i] : parsed, o.type)
           );
         } catch {
           outputLines = stdout.trim().split('\n').filter(line => line.trim());
         }
   
-        const expectedLines = testCase.outputs.map(output =>
-          formatValueForExecution(output.value, output.type)
+        const expectedLines = testCase.outputs.map(o =>
+          formatValueForExecution(o.value, o.type)
         );
   
-  
-        const passed =
-          outputLines.length === expectedLines.length &&
-          outputLines.every((out, idx) => {
-            const expected = expectedLines[idx];
-            const outType = testCase.outputs[idx].type;
-            const expectedType = testCase.outputs[idx].type;
-            if (outType.startsWith('array<') && expectedType.startsWith('array<')) {
-              const normalizeArray = (arrStr: string) => JSON.stringify(JSON.parse(arrStr).sort((a: any, b: any) => a - b));
-              return normalizeArray(out) === normalizeArray(expected); // Order-independent for now
+        const passed = outputLines.length === expectedLines.length &&
+          outputLines.every((out, i) => {
+            const expected = expectedLines[i];
+            const type = testCase.outputs[i].type;
+            if (type.startsWith("array<")) {
+              const normalize = (s: string) => JSON.stringify(JSON.parse(s).sort());
+              return normalize(out) === normalize(expected);
             }
             return out.trim() === expected.trim();
-          }) &&
-          exitCode === 0;
+          }) && exitCode === 0;
   
         results.push({
           testCaseIndex: testCase.index,
@@ -429,38 +435,39 @@ class ProblemService implements IProblemService {
           stderr: stderr.trim(),
           passed,
         });
-      } catch (error) {
-        console.error(`Error executing test case ${testCase.index}:`, error);
+      } catch (err) {
+        console.error(`Execution failed for test case ${testCase.index}`, err);
         results.push({
           testCaseIndex: testCase.index,
-          input: testCase.inputs.map(input => formatValueForExecution(input.value, input.type)).join('\n'),
-          expectedOutput: testCase.outputs.map(output => formatValueForExecution(output.value, output.type)).join('\n'),
+          input: testCase.inputs.map(i => formatValueForExecution(i.value, i.type)).join('\n'),
+          expectedOutput: testCase.outputs.map(o => formatValueForExecution(o.value, o.type)).join('\n'),
           actualOutput: "",
-          stderr: error instanceof Error ? error.message : "Execution failed",
+          stderr: err instanceof Error ? err.message : "Execution failed",
           passed: false,
         });
       }
     }
   
-    const allPassed = results.every((r) => r.passed);
+    const allPassed = results.every(r => r.passed);
   
     if (!isRunOnly) {
-      const submission = new Submission({
+      await new Submission({
         userId,
         problemId,
         language,
         code,
         results,
         passed: allPassed,
-      });
-      await submission.save();
+        executionTime: totalExecutionTime,
+        memoryUsed: maxMemoryUsed,
+      }).save();
   
       if (allPassed) {
         const user = await User.findById(userId).select("solvedProblems");
         if (!user) throw new NotFoundError(ErrorMessages.USER_NOT_FOUND);
   
-        const isAlreadySolved = user.solvedProblems.some(id => id.toString() === problemId);
-        if (!isAlreadySolved) {
+        const alreadySolved = user.solvedProblems.some(id => id.toString() === problemId);
+        if (!alreadySolved) {
           await User.findByIdAndUpdate(userId, {
             $inc: { problemsSolved: 1 },
             $addToSet: { solvedProblems: problemId },
@@ -470,9 +477,9 @@ class ProblemService implements IProblemService {
       }
     }
   
-    return { results, passed: allPassed };
+    return { results, passed: allPassed, executionTime: totalExecutionTime };
   }
-
+  
   
   async incrementSolvedCount(problemId: string): Promise<IProblem | null> {
     const problem = await this.problemRepository.findById(problemId);
@@ -496,6 +503,10 @@ class ProblemService implements IProblemService {
       .sort({ submittedAt: -1 })
       .lean()
       .exec();
+
+    // console.log("submissions", submissions);
+
+      
 
     return submissions;
   }

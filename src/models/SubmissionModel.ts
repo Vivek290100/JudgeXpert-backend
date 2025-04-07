@@ -18,6 +18,7 @@ const submissionSchema = new Schema<ISubmission>({
   passed: { type: Boolean, required: true },
   submittedAt: { type: Date, default: Date.now },
   isRunOnly: { type: Boolean, default: false },
+  executionTime: { type: Number, default: 0 },
 }, { timestamps: true });
 
 export default model<ISubmission>("Submission", submissionSchema);
