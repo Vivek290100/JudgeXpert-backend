@@ -1,4 +1,5 @@
 // Backend\src\interfaces\IUserService.ts
+import { ILeaderboardUser } from "../../types/ILeaderboardUser";
 import { IUser } from "../../types/IUser";
 
 export interface IUserService {
@@ -13,4 +14,5 @@ export interface IUserService {
     resetPassword(email: string, otp: string, newPassword: string): Promise<void>;
     updateProfile(data: {userId: string; fullName?: string; github?: string; linkedin?: string; profileImage?: Express.Multer.File;}): Promise<IUser>;
     googleLogin(credential: string): Promise<{ user: IUser; accessToken: string; refreshToken: string }>;
-  }
+    getLeaderboard(page: number, limit: number): Promise<{ leaderboard: ILeaderboardUser[]; totalPages: number; currentPage: number }>;
+    }

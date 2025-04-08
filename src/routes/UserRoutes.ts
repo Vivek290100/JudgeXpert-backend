@@ -22,6 +22,8 @@ userRouter
   .put(UserRoutes.UPDATE_PROFILE, authMiddleware, upload.single("profileImage"), userController.updateProfile.bind(userController))
   .post(UserRoutes.GOOGLE_LOGIN, userController.googleLogin.bind(userController))
   .post(UserRoutes.REFRESH_TOKEN, userController.refreshToken.bind(userController))
+  .put(UserRoutes.UPDATE_PROFILE, authMiddleware, upload.single("profileImage"), userController.updateProfile.bind(userController))
+  .get(UserRoutes.LEADERBOARD, authMiddleware, userController.getLeaderboard.bind(userController)) // New route
 
   .post(UserRoutes.CREATE_DISCUSSION, authMiddleware, discussionController.createDiscussion.bind(discussionController))
   .get(UserRoutes.GET_DISCUSSIONS,authMiddleware, discussionController.getDiscussions.bind(discussionController))

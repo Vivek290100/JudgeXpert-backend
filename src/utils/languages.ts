@@ -85,3 +85,30 @@ export function formatValueForExecution(value: any, type: string): string {
   if (type === 'string') return `"${value}"`;
   return value.toString();
 }
+
+
+export function parseValue(value: string, type: string): any {
+  try {
+    value = value.trim();
+    if (type === 'int' || type === 'integer') return parseInt(value);
+    if (type === 'boolean') return value.toLowerCase() === 'true';
+    if (type === 'string') return value;
+
+    if (type.startsWith('array<')) {
+      const innerType = type.replace('array<', '').replace('>', '');
+      const arrayValues = JSON.parse(value);
+      if (!Array.isArray(arrayValues)) throw new Error('Invalid array format');
+      return arrayValues.map((item) => {
+        if (innerType === 'integer' || innerType === 'int') return parseInt(item);
+        if (innerType === 'boolean') return item.toString().toLowerCase() === 'true';
+        if (innerType === 'string') return item.toString();
+        throw new Error(`Unsupported array inner type: ${innerType}`);
+      });
+    }
+
+    return value;
+  } catch (error) {
+    console.error("Error parsing value:", { value, type, error });
+    throw new Error(`Failed to parse value: ${value} as type ${type}`);
+  }
+}
