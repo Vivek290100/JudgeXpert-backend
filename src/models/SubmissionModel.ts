@@ -19,6 +19,7 @@ const submissionSchema = new Schema<ISubmission>({
   submittedAt: { type: Date, default: Date.now },
   isRunOnly: { type: Boolean, default: false },
   executionTime: { type: Number, default: 0 },
+  contestId: { type: Schema.Types.ObjectId, ref: "Contest", default: null },
 }, { timestamps: true });
 
 export default model<ISubmission>("Submission", submissionSchema);

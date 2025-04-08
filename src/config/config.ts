@@ -11,6 +11,8 @@ export const CONFIG = {
 
   FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:4000",
 
+  OTP_EXPIRY_SECONDS: Number(process.env.OTP_EXPIRY_SECONDS) || 300,
+
   ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET || "",
   REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET || "",
 

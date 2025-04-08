@@ -7,8 +7,8 @@ import { BadRequestError, ErrorMessages, NotFoundError } from "../utils/errors";
 
 class DiscussionService implements IDiscussionService {
   constructor(
-    private discussionRepository: IDiscussionRepository,
-    private problemRepository: IProblemRepository
+    private _discussionRepository: IDiscussionRepository,
+    private _problemRepository: IProblemRepository
   ) {}
 
   async createDiscussion(
@@ -20,12 +20,12 @@ class DiscussionService implements IDiscussionService {
       throw new BadRequestError(ErrorMessages.ALL_FIELDS_REQUIRED);
     }
 
-    const problem = await this.problemRepository.findById(problemId);
+    const problem = await this._problemRepository.findById(problemId);
     if (!problem) {
       throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
     }
 
-    return this.discussionRepository.createAndPopulate({
+    return this._discussionRepository.createAndPopulate({
       problemId,
       userId,
       message: message.trim(),
@@ -41,7 +41,7 @@ class DiscussionService implements IDiscussionService {
       throw new BadRequestError(ErrorMessages.ALL_FIELDS_REQUIRED);
     }
 
-    return this.discussionRepository.addReplyAndPopulate(
+    return this._discussionRepository.addReplyAndPopulate(
       discussionId,
       userId,
       message.trim()
@@ -57,13 +57,13 @@ class DiscussionService implements IDiscussionService {
       throw new BadRequestError(ErrorMessages.PROBLEM_ID_REQUIRED);
     }
 
-    const problem = await this.problemRepository.findById(problemId);
+    const problem = await this._problemRepository.findById(problemId);
     if (!problem) {
       throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
     }
 
     const query: FilterQuery<IDiscussion> = { problemId };
-    return this.discussionRepository.findPaginated(page, limit, query);
+    return this._discussionRepository.findPaginated(page, limit, query);
   }
 }
 

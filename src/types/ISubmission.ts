@@ -15,4 +15,5 @@ export interface ISubmission {
   executionTime: number;
   createdAt?: Date;
   updatedAt?: Date;
+  contestId: Types.ObjectId;
 }
