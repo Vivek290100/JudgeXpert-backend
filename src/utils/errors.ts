@@ -26,6 +26,7 @@ export const ErrorMessages = {
   GOOGLE_AUTH_PASSWORD: "Please use Google to manage your password",
   OTP_NOT_VERIFIED: "OTP not verified. Please verify OTP first.",
   GOOGLE_LOGIN_FAILED: (error: string) => `Google login failed: ${error}`,
+  INVALID_PAGINATION_PARAMS: "invalid pagination params",
   
   // Problem
   PROBLEM_NOT_FOUND: "Problem not found",

@@ -14,6 +14,7 @@ export const SuccessMessages = {
   PASSWORD_RESET_SUCCESS: "Password reset successfully",
   PROFILE_UPDATED: "Profile updated successfully",
   TOKEN_REFRESHED: "Token refreshed successfully",
+  LEADERBOARD_FETCHED: "Leaderboard fetched successfully", 
   
   // Admin
   USERS_FETCHED: "Users fetched successfully",

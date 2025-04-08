@@ -7,7 +7,7 @@ import TestCase from "../models/TestCaseModel";
 import DefaultCode from "../models/DefaultCodeModel";
 import { Types } from "mongoose";
 import { FilterQuery, UpdateQuery } from "mongoose";
-import { formatValueForExecution, getLanguageConfig, SUPPORTED_LANGUAGES } from "../utils/languages";
+import { formatValueForExecution, getLanguageConfig, parseValue, SUPPORTED_LANGUAGES } from "../utils/languages";
 import axios from "axios";
 import { ExecutionResult } from "../types/IExecution";
 import { TestCaseResult } from "../types/ITestCaseResult";
@@ -221,7 +221,7 @@ class ProblemService implements IProblemService {
         const filePath = path.join(boilerplateDir, file);
         const fileContent = await fs.readFile(filePath, "utf-8");
 
-        const ext = path.extname(file).slice(1); // e.g., "cpp", "java"
+        const ext = path.extname(file).slice(1);
         const languageConfig = SUPPORTED_LANGUAGES.find(lang => lang.ext === ext);
 
         if (!languageConfig) {
@@ -504,38 +504,9 @@ class ProblemService implements IProblemService {
       .lean()
       .exec();
 
-    // console.log("submissions", submissions);
-
-      
-
     return submissions;
   }
 }
 
-function parseValue(value: string, type: string): any {
-  try {
-    value = value.trim();
-    if (type === 'int' || type === 'integer') return parseInt(value);
-    if (type === 'boolean') return value.toLowerCase() === 'true';
-    if (type === 'string') return value;
-
-    if (type.startsWith('array<')) {
-      const innerType = type.replace('array<', '').replace('>', '');
-      const arrayValues = JSON.parse(value);
-      if (!Array.isArray(arrayValues)) throw new Error('Invalid array format');
-      return arrayValues.map((item) => {
-        if (innerType === 'integer' || innerType === 'int') return parseInt(item);
-        if (innerType === 'boolean') return item.toString().toLowerCase() === 'true';
-        if (innerType === 'string') return item.toString();
-        throw new Error(`Unsupported array inner type: ${innerType}`);
-      });
-    }
-
-    return value;
-  } catch (error) {
-    console.error("Error parsing value:", { value, type, error });
-    throw new Error(`Failed to parse value: ${value} as type ${type}`);
-  }
-}
 
 export default ProblemService;

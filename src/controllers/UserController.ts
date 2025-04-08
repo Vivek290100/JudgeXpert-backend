@@ -230,6 +230,34 @@ class UserController {
       handleError(res, error);
     }
   }
+
+
+  async getLeaderboard(req: Request, res: Response): Promise<void> {
+    
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      if (page < 1 || limit < 1) {
+        throw new BadRequestError(ErrorMessages.INVALID_PAGINATION_PARAMS);
+      }
+
+      const result = await this._userService.getLeaderboard(page, limit);
+
+      sendResponse(res, {
+        success: true,
+        status: StatusCode.SUCCESS,
+        message: SuccessMessages.LEADERBOARD_FETCHED,
+        data: {
+          leaderboard: result.leaderboard,
+          totalPages: result.totalPages,
+          currentPage: result.currentPage,
+        },
+      });
+    } catch (error: any) {
+      handleError(res, error);
+    }
+  }
 }
 
 export default UserController;

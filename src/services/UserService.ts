@@ -11,6 +11,7 @@ import { BadRequestError, ErrorMessages, ForbiddenError, NotFoundError, Unauthor
 import { IJWTService } from "../interfaces/utilInterfaces/IJWTService";
 import { IEmailService } from "../interfaces/utilInterfaces/IEmailService";
 import { IRedisService } from "../interfaces/utilInterfaces/IRedisService";
+import { ILeaderboardUser } from "../types/ILeaderboardUser";
 
 class UserService implements IUserService {
   private readonly OTP_EXPIRY_SECONDS = 300;
@@ -288,6 +289,20 @@ class UserService implements IUserService {
     } catch (error) {
       throw new BadRequestError(ErrorMessages.GOOGLE_LOGIN_FAILED(error instanceof Error ? error.message : String(error)));
     }
+  }
+
+  async getLeaderboard(page: number, limit: number): Promise<{ leaderboard: ILeaderboardUser[]; totalPages: number; currentPage: number }> {
+    
+    const { users, total } = await this.userRepository.findLeaderboard(page, limit);
+    console.log("usersssssssssssssss",users);
+    
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      leaderboard: users,
+      totalPages,
+      currentPage: page,
+    };
   }
 }
 
