@@ -1,15 +1,12 @@
-// Backend\src\routes\UserRoutes.ts
 import { Router } from "express";
 import authMiddleware from "../middlewares/authMiddleware";
 import { ProblemRoutes, UserRoutes } from "../utils/constants";
-import {Dependencies} from "../utils/dependencies"
+import { Dependencies } from "../utils/dependencies";
 import { upload } from "../utils/multer";
 
 const userRouter = Router();
-const { userController, problemController, discussionController } = Dependencies;
+const { userController, problemController, discussionController, contestController } = Dependencies;
 
-
-// Auth & user
 userRouter
   .post(UserRoutes.SIGNUP, userController.signUpUser.bind(userController))
   .post(UserRoutes.OTP_VERIFY, userController.verifyOtp.bind(userController))
@@ -22,19 +19,17 @@ userRouter
   .put(UserRoutes.UPDATE_PROFILE, authMiddleware, upload.single("profileImage"), userController.updateProfile.bind(userController))
   .post(UserRoutes.GOOGLE_LOGIN, userController.googleLogin.bind(userController))
   .post(UserRoutes.REFRESH_TOKEN, userController.refreshToken.bind(userController))
-  .put(UserRoutes.UPDATE_PROFILE, authMiddleware, upload.single("profileImage"), userController.updateProfile.bind(userController))
-  .get(UserRoutes.LEADERBOARD, authMiddleware, userController.getLeaderboard.bind(userController)) // New route
-
+  .get(UserRoutes.LEADERBOARD, authMiddleware, userController.getLeaderboard.bind(userController))
   .post(UserRoutes.CREATE_DISCUSSION, authMiddleware, discussionController.createDiscussion.bind(discussionController))
-  .get(UserRoutes.GET_DISCUSSIONS,authMiddleware, discussionController.getDiscussions.bind(discussionController))
-  .post(UserRoutes.ADD_REPLY, authMiddleware, discussionController.addReply.bind(discussionController));
+  .get(UserRoutes.GET_DISCUSSIONS, authMiddleware, discussionController.getDiscussions.bind(discussionController))
+  .post(UserRoutes.ADD_REPLY, authMiddleware, discussionController.addReply.bind(discussionController))
+  .get("/contests", authMiddleware, contestController.getContests.bind(contestController))
+  .post("/contests/:contestId/register", authMiddleware, contestController.registerForContest.bind(contestController));
 
-// Problem
 userRouter
   .get(ProblemRoutes.GET_ALL_PROBLEMS, authMiddleware, problemController.getProblems.bind(problemController))
   .get(ProblemRoutes.GET_PROBLEM_BY_SLUG, authMiddleware, problemController.getProblemBySlug.bind(problemController))
-  .post(ProblemRoutes.EXECUTE_CODE, authMiddleware,problemController.executeCode.bind(problemController))
-  .get(ProblemRoutes.GET_SUBMISSIONS, authMiddleware,problemController.getUserSubmissions.bind(problemController))
+  .post(ProblemRoutes.EXECUTE_CODE, authMiddleware, problemController.executeCode.bind(problemController))
+  .get(ProblemRoutes.GET_SUBMISSIONS, authMiddleware, problemController.getUserSubmissions.bind(problemController));
 
-  
 export default userRouter;
