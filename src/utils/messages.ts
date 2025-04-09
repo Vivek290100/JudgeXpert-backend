@@ -39,5 +39,9 @@ export const SuccessMessages = {
   SUBMISSIONS_FETCHED: "Submissions fetched successfully",
 
   DISCUSSION_CREATED: "discission created",
-  DISCUSSIONS_FETCHED: "doscussions feched successfully"
+  DISCUSSIONS_FETCHED: "doscussions feched successfully",
+
+  CONTESTS_FETCHED: "contest fetched",
+  CONTEST_CREATED: 'contest created',
+
 };

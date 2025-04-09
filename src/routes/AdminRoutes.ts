@@ -1,14 +1,11 @@
-// Backend\src\routes\AdminRoutes.ts
 import { Router } from "express";
 import { AdminRoutes } from "../utils/constants";
 import { Dependencies } from "../utils/dependencies";
 import adminMiddleware from "../middlewares/adminMiddleware";
 
-
 const adminRouter = Router();
-const { adminController, problemController } = Dependencies;
+const { adminController, problemController, contestController } = Dependencies;
 
-// User 
 adminRouter
   .get(AdminRoutes.GET_ALL_USERS, adminMiddleware, adminController.getAllUsers.bind(adminController))
   .get(AdminRoutes.GET_USER_BY_ID, adminMiddleware, adminController.getUserById.bind(adminController))
@@ -16,7 +13,6 @@ adminRouter
   .post(AdminRoutes.UNBLOCK_USER, adminMiddleware, adminController.unblockUser.bind(adminController))
   .post(AdminRoutes.TOGGLE_BLOCK, adminMiddleware, adminController.toggleBlockUser.bind(adminController));
 
-// Problem 
 adminRouter
   .get(AdminRoutes.GET_ALL_PROBLEMS, adminMiddleware, problemController.getProblems.bind(problemController))
   .post(AdminRoutes.CREATE_PROBLEM, adminMiddleware, problemController.createProblem.bind(problemController))
@@ -27,6 +23,9 @@ adminRouter
   .patch(AdminRoutes.BLOCK_PROBLEM, adminMiddleware, problemController.blockProblem.bind(problemController))
   .patch(AdminRoutes.UNBLOCK_PROBLEM, adminMiddleware, problemController.unblockProblem.bind(problemController));
 
-
+adminRouter
+  .get("/contests", adminMiddleware, contestController.getAdminContests.bind(contestController))
+  .post("/contests", adminMiddleware, contestController.createContest.bind(contestController))
+  .put("/contests/:contestId", adminMiddleware, contestController.updateContestStatus.bind(contestController));
 
 export default adminRouter;
