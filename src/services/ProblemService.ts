@@ -17,7 +17,7 @@ import User from "../models/UserModel";
 import { ISubmission } from "../types/ISubmission";
 
 class ProblemService implements IProblemService {
-  constructor(private problemRepository: IProblemRepository) {}
+  constructor(private _problemRepository: IProblemRepository) {}
 
   async createProblemFromFiles(problemDir: string): Promise<IProblem | null> {
     console.log("Processing problem directory:", problemDir);
@@ -182,7 +182,7 @@ class ProblemService implements IProblemService {
       const query: FilterQuery<IProblem> = { slug };
       const update: UpdateQuery<IProblem> = { $set: problemData };
       const options = { upsert: true, new: true };
-      problem = await this.problemRepository.upsertProblem(query, update, options);
+      problem = await this._problemRepository.upsertProblem(query, update, options);
       if (!problem?._id) {
         throw new NotFoundError(ErrorMessages.FAILED_TO_PROCESS_PROBLEM);
       }
@@ -246,7 +246,7 @@ class ProblemService implements IProblemService {
 
     // Update problem with testCaseIds and defaultCodeIds
     try {
-      await this.problemRepository.upsertProblem(
+      await this._problemRepository.upsertProblem(
         { _id: problem._id },
         { $set: { testCaseIds, defaultCodeIds } },
         { new: true }
@@ -257,7 +257,7 @@ class ProblemService implements IProblemService {
     }
 
     // Fetch the updated problem
-    const updatedProblem = await this.problemRepository.findById(problem._id.toString());
+    const updatedProblem = await this._problemRepository.findById(problem._id.toString());
     if (!updatedProblem) {
       console.error("Failed to fetch updated problem after processing");
       throw new NotFoundError(ErrorMessages.FAILED_TO_PROCESS_PROBLEM);
@@ -268,13 +268,13 @@ class ProblemService implements IProblemService {
   }
 
   async getProblemById(id: string): Promise<IProblem | null> {
-    const problem = await this.problemRepository.findById(id);
+    const problem = await this._problemRepository.findById(id);
     if (!problem) throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
     return problem;
   }
 
   async getProblemBySlug(slug: string): Promise<IProblem | null> {
-    const problem = await this.problemRepository.findBySlug(slug);
+    const problem = await this._problemRepository.findBySlug(slug);
     if (!problem) throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
     return problem;
   }
@@ -285,14 +285,14 @@ class ProblemService implements IProblemService {
     query: FilterQuery<IProblem> = {}
   ): Promise<{ problems: IProblem[]; total: number }> {
     try {
-      return await this.problemRepository.findPaginated(page, limit, query);
+      return await this._problemRepository.findPaginated(page, limit, query);
     } catch (error) {
       throw new Error(`Failed to fetch problems: ${(error as Error).message}`);
     }
   }
 
   async countProblems(query: FilterQuery<IProblem> = {}): Promise<number> {
-    return await this.problemRepository.countDocuments(query);
+    return await this._problemRepository.countDocuments(query);
   }
 
   async processSpecificProblem(problemDir: string): Promise<IProblem | null> {
@@ -305,21 +305,21 @@ class ProblemService implements IProblemService {
     if (!validStatuses.includes(status)) {
       throw new BadRequestError(ErrorMessages.INVALID_STATUS);
     }
-    const problem = await this.problemRepository.findById(id);
+    const problem = await this._problemRepository.findById(id);
     if (!problem) throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
-    return this.problemRepository.update(id, { status });
+    return this._problemRepository.update(id, { status });
   }
 
   async blockProblem(id: string): Promise<IProblem | null> {
-    const problem = await this.problemRepository.findById(id);
+    const problem = await this._problemRepository.findById(id);
     if (!problem) throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
-    return this.problemRepository.update(id, { isBlocked: true });
+    return this._problemRepository.update(id, { isBlocked: true });
   }
 
   async unblockProblem(id: string): Promise<IProblem | null> {
-    const problem = await this.problemRepository.findById(id);
+    const problem = await this._problemRepository.findById(id);
     if (!problem) throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
-    return this.problemRepository.update(id, { isBlocked: false });
+    return this._problemRepository.update(id, { isBlocked: false });
   }
 
   async updateProblem(id: string, updates: UpdateQuery<IProblem>): Promise<IProblem | null> {
@@ -330,9 +330,9 @@ class ProblemService implements IProblemService {
     if (updates.isBlocked !== undefined && typeof updates.isBlocked !== "boolean") {
       throw new BadRequestError("isBlocked must be a boolean");
     }
-    const problem = await this.problemRepository.findById(id);
+    const problem = await this._problemRepository.findById(id);
     if (!problem) throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
-    return this.problemRepository.update(id, updates);
+    return this._problemRepository.update(id, updates);
   }
 
   async listServerProblems(): Promise<{ problemDir: string; existsInDatabase: boolean }[]> {
@@ -345,7 +345,7 @@ class ProblemService implements IProblemService {
       );
 
     const slugs = problemDirs;
-    const existingSlugs = await this.problemRepository
+    const existingSlugs = await this._problemRepository
       .find({ slug: { $in: slugs } })
       .then((problems) => problems.map((p) => p.slug));
 
@@ -366,7 +366,7 @@ class ProblemService implements IProblemService {
     passed: boolean;
     executionTime: number;
   }> {
-    const problem = await this.problemRepository.findById(problemId);
+    const problem = await this._problemRepository.findById(problemId);
     if (!problem) throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
   
     const langConfig = getLanguageConfig(language);
@@ -472,7 +472,7 @@ class ProblemService implements IProblemService {
             $inc: { problemsSolved: 1 },
             $addToSet: { solvedProblems: problemId },
           });
-          await this.problemRepository.update(problemId, { $inc: { solvedCount: 1 } });
+          await this._problemRepository.update(problemId, { $inc: { solvedCount: 1 } });
         }
       }
     }
@@ -482,16 +482,16 @@ class ProblemService implements IProblemService {
   
   
   async incrementSolvedCount(problemId: string): Promise<IProblem | null> {
-    const problem = await this.problemRepository.findById(problemId);
+    const problem = await this._problemRepository.findById(problemId);
     if (!problem) throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
-    return this.problemRepository.update(problemId, { $inc: { solvedCount: 1 } });
+    return this._problemRepository.update(problemId, { $inc: { solvedCount: 1 } });
   }
 
   async getUserSubmissions(userId: string, problemSlug?: string): Promise<ISubmission[]> {
     const query: FilterQuery<ISubmission> = { userId };
 
     if (problemSlug) {
-      const problem = await this.problemRepository.findBySlug(problemSlug);
+      const problem = await this._problemRepository.findBySlug(problemSlug);
       if (!problem) {
         throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
       }

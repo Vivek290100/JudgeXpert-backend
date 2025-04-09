@@ -14,15 +14,14 @@ import { IRedisService } from "../interfaces/utilInterfaces/IRedisService";
 import { ILeaderboardUser } from "../types/ILeaderboardUser";
 
 class UserService implements IUserService {
-  private readonly OTP_EXPIRY_SECONDS = 300;
-  private googleClient = new OAuth2Client(CONFIG.GOOGLE_CLIENT_ID);
+  private _googleClient = new OAuth2Client(CONFIG.GOOGLE_CLIENT_ID);
 
   constructor(
-    private userRepository: IUserRepository,
-    private refreshTokenRepository: IRefreshTokenRepository,
-    private jwtService: IJWTService,
-    private emailService: IEmailService,
-    private redisService: IRedisService
+    private _userRepository: IUserRepository,
+    private _refreshTokenRepository: IRefreshTokenRepository,
+    private _jwtService: IJWTService,
+    private _emailService: IEmailService,
+    private _redisService: IRedisService
   ) {}
 
   private async generateAndSendOtp(email: string, purpose: "signup" | "reset" = "signup"): Promise<string> {
@@ -30,8 +29,8 @@ class UserService implements IUserService {
     const otpKey = `${purpose}:otp:${email}`;
     console.log(otp, email);
 
-    await this.redisService.set(otpKey, otp, { EX: this.OTP_EXPIRY_SECONDS });
-    await this.emailService.sendOtpEmail({
+    await this._redisService.set(otpKey, otp, { EX: CONFIG.OTP_EXPIRY_SECONDS });
+    await this._emailService.sendOtpEmail({
       to: email,
       subject: purpose === "signup" ? "Verify your email" : "Reset your password",
       otp,
@@ -45,7 +44,7 @@ class UserService implements IUserService {
       throw new BadRequestError(ErrorMessages.MISSING_REQUIRED_FIELD("email, password, or userName"));
     }
 
-    const existingUser = await this.userRepository.findByQuery({
+    const existingUser = await this._userRepository.findByQuery({
       $or: [{ email: data.email }, { userName: data.userName }],
     });
 
@@ -66,15 +65,15 @@ class UserService implements IUserService {
     };
 
     userData.password = await bcrypt.hash(data.password, 10);
-    await this.redisService.set(`tempUser:${data.email}`, JSON.stringify(userData), {
-      EX: this.OTP_EXPIRY_SECONDS,
+    await this._redisService.set(`tempUser:${data.email}`, JSON.stringify(userData), {
+      EX: CONFIG.OTP_EXPIRY_SECONDS,
     });
     await this.generateAndSendOtp(data.email);
     return { message: "Registration OTP sent successfully", email: data.email };
   }
 
   async verifyOtpAndCreateUser(email: string, otp: string): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
-    const storedOtp = await this.redisService.get(`signup:otp:${email}`);
+    const storedOtp = await this._redisService.get(`signup:otp:${email}`);
 
     if (!storedOtp) {
       throw new BadRequestError(ErrorMessages.OTP_EXPIRED);
@@ -83,24 +82,24 @@ class UserService implements IUserService {
       throw new BadRequestError(ErrorMessages.INVALID_OTP);
     }
 
-    const userDataString = await this.redisService.get(`tempUser:${email}`);
+    const userDataString = await this._redisService.get(`tempUser:${email}`);
     if (!userDataString) {
       throw new BadRequestError(ErrorMessages.SIGNUP_SESSION_EXPIRED);
     }
 
     const userData = JSON.parse(userDataString);
-    const user = await this.userRepository.create(userData);
+    const user = await this._userRepository.create(userData);
 
     await Promise.all([
-      this.redisService.del(`signup:otp:${email}`),
-      this.redisService.del(`tempUser:${email}`),
+      this._redisService.del(`signup:otp:${email}`),
+      this._redisService.del(`tempUser:${email}`),
     ]);
 
     const userIdString = user._id.toString();
-    const accessToken = this.jwtService.generateAccessToken(userIdString);
-    const refreshToken = this.jwtService.generateRefreshToken(userIdString);
+    const accessToken = this._jwtService.generateAccessToken(userIdString);
+    const refreshToken = this._jwtService.generateRefreshToken(userIdString);
 
-    await this.refreshTokenRepository.create({
+    await this._refreshTokenRepository.create({
       userId: userIdString,
       token: refreshToken,
     });
@@ -109,28 +108,28 @@ class UserService implements IUserService {
   }
 
   async refreshAccessToken(userId: string): Promise<{ accessToken: string; refreshToken: string }> {
-    const storedToken = await this.refreshTokenRepository.findByUserId(userId);
+    const storedToken = await this._refreshTokenRepository.findByUserId(userId);
     if (!storedToken) {
       throw new UnauthorizedError(ErrorMessages.NO_REFRESH_TOKEN);
     }
   
     try {
-      this.jwtService.verifyToken(storedToken, "refresh");
+      this._jwtService.verifyToken(storedToken, "refresh");
     } catch (error) {
-      await this.refreshTokenRepository.deleteByUserId(userId);
+      await this._refreshTokenRepository.deleteByUserId(userId);
       throw new UnauthorizedError(ErrorMessages.INVALID_REFRESH_TOKEN);
     }
   
-    const newAccessToken = this.jwtService.generateAccessToken(userId);
-    const newRefreshToken = this.jwtService.generateRefreshToken(userId);
+    const newAccessToken = this._jwtService.generateAccessToken(userId);
+    const newRefreshToken = this._jwtService.generateRefreshToken(userId);
   
-    await this.refreshTokenRepository.updateToken(userId, newRefreshToken);
+    await this._refreshTokenRepository.updateToken(userId, newRefreshToken);
   
     return { accessToken: newAccessToken, refreshToken: newRefreshToken };
   }
 
   async loginUser(email: string, password: string): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
-    const user = await this.userRepository.findByQuery({ email });
+    const user = await this._userRepository.findByQuery({ email });
     
     if (!user) {
       throw new NotFoundError(ErrorMessages.USER_NOT_FOUND);
@@ -146,10 +145,10 @@ class UserService implements IUserService {
     }
 
     const userIdString = user._id.toString();
-    const accessToken = this.jwtService.generateAccessToken(userIdString);
-    const refreshToken = this.jwtService.generateRefreshToken(userIdString);
+    const accessToken = this._jwtService.generateAccessToken(userIdString);
+    const refreshToken = this._jwtService.generateRefreshToken(userIdString);
 
-    await this.refreshTokenRepository.create({
+    await this._refreshTokenRepository.create({
       userId: userIdString,
       token: refreshToken,
     });
@@ -158,15 +157,15 @@ class UserService implements IUserService {
   }
 
   async logout(userId: string): Promise<void> {
-    const storedToken = await this.refreshTokenRepository.findByUserId(userId);
+    const storedToken = await this._refreshTokenRepository.findByUserId(userId);
     if (!storedToken) {
       throw new NotFoundError(ErrorMessages.NO_REFRESH_TOKEN);
     }
-    await this.refreshTokenRepository.deleteByUserId(userId);
+    await this._refreshTokenRepository.deleteByUserId(userId);
   }
 
   async resendOtp(email: string): Promise<{ message: string; email: string }> {
-    const userData = await this.redisService.get(`tempUser:${email}`);
+    const userData = await this._redisService.get(`tempUser:${email}`);
     if (!userData) {
       throw new BadRequestError(ErrorMessages.SIGNUP_SESSION_EXPIRED);
     }
@@ -175,7 +174,7 @@ class UserService implements IUserService {
   }
 
   async forgotPassword(email: string): Promise<{ message: string; email: string }> {
-    const user = await this.userRepository.findByQuery({ email });
+    const user = await this._userRepository.findByQuery({ email });
     if (!user) {
       throw new NotFoundError(ErrorMessages.USER_NOT_FOUND);
     }
@@ -187,7 +186,7 @@ class UserService implements IUserService {
   }
 
   async verifyForgotPasswordOtp(email: string, otp: string): Promise<void> {
-    const storedOtp = await this.redisService.get(`reset:otp:${email}`);
+    const storedOtp = await this._redisService.get(`reset:otp:${email}`);
 
     if (!storedOtp) {
       throw new BadRequestError(ErrorMessages.OTP_EXPIRED);
@@ -196,25 +195,25 @@ class UserService implements IUserService {
       throw new BadRequestError(ErrorMessages.INVALID_OTP);
     }
 
-    await this.redisService.set(`reset:verified:${email}`, "true", { EX: this.OTP_EXPIRY_SECONDS });
-    await this.redisService.del(`reset:otp:${email}`);
+    await this._redisService.set(`reset:verified:${email}`, "true", { EX: CONFIG.OTP_EXPIRY_SECONDS });
+    await this._redisService.del(`reset:otp:${email}`);
   }
 
   async resetPassword(email: string, otp: string, newPassword: string): Promise<void> {
-    const isVerified = await this.redisService.get(`reset:verified:${email}`);
+    const isVerified = await this._redisService.get(`reset:verified:${email}`);
     if (!isVerified) {
       throw new BadRequestError(ErrorMessages.OTP_NOT_VERIFIED);
     }
 
-    const user = await this.userRepository.findByQuery({ email });
+    const user = await this._userRepository.findByQuery({ email });
     if (!user) {
       throw new NotFoundError(ErrorMessages.USER_NOT_FOUND);
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await this.userRepository.update(user._id.toString(), { password: hashedPassword });
+    await this._userRepository.update(user._id.toString(), { password: hashedPassword });
 
-    await this.redisService.del(`reset:verified:${email}`);
+    await this._redisService.del(`reset:verified:${email}`);
   }
 
   async updateProfile(data: {
@@ -234,7 +233,7 @@ class UserService implements IUserService {
       updateData.profileImage = s3Url;
     }
 
-    const updatedUser = await this.userRepository.update(data.userId, updateData);
+    const updatedUser = await this._userRepository.update(data.userId, updateData);
     if (!updatedUser) throw new NotFoundError(ErrorMessages.USER_NOT_FOUND);
 
     return updatedUser;
@@ -242,7 +241,7 @@ class UserService implements IUserService {
 
   async googleLogin(credential: string): Promise<{ user: IUser; accessToken: string; refreshToken: string }> {
     try {
-      const ticket = await this.googleClient.verifyIdToken({
+      const ticket = await this._googleClient.verifyIdToken({
         idToken: credential,
         audience: CONFIG.GOOGLE_CLIENT_ID,
       });
@@ -252,7 +251,7 @@ class UserService implements IUserService {
         throw new BadRequestError(ErrorMessages.INVALID_CREDENTIALS);
       }
 
-      let user = await this.userRepository.findByQuery({ email: payload.email });
+      let user = await this._userRepository.findByQuery({ email: payload.email });
       
       if (!user) {
         const userData: Partial<IUser> = {
@@ -269,7 +268,7 @@ class UserService implements IUserService {
           isPremium: false,
         };
 
-        user = await this.userRepository.create(userData);
+        user = await this._userRepository.create(userData);
       }
 
       if (user.isBlocked) {
@@ -277,10 +276,10 @@ class UserService implements IUserService {
       }
 
       const userIdString = user._id.toString();
-      const accessToken = this.jwtService.generateAccessToken(userIdString);
-      const refreshToken = this.jwtService.generateRefreshToken(userIdString);
+      const accessToken = this._jwtService.generateAccessToken(userIdString);
+      const refreshToken = this._jwtService.generateRefreshToken(userIdString);
 
-      await this.refreshTokenRepository.create({
+      await this._refreshTokenRepository.create({
         userId: userIdString,
         token: refreshToken,
       });
@@ -293,7 +292,7 @@ class UserService implements IUserService {
 
   async getLeaderboard(page: number, limit: number): Promise<{ leaderboard: ILeaderboardUser[]; totalPages: number; currentPage: number }> {
     
-    const { users, total } = await this.userRepository.findLeaderboard(page, limit);
+    const { users, total } = await this._userRepository.findLeaderboard(page, limit);
     console.log("usersssssssssssssss",users);
     
     const totalPages = Math.ceil(total / limit);

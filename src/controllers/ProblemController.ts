@@ -169,15 +169,15 @@ class ProblemController {
       const difficulty = req.query.difficulty as string;
       const status = req.query.status as string;
       const solved = req.query.solved as string;
-
+  
       const query: FilterQuery<IProblem> = {};
       const userId = req.user?.userId;
       const userRole = req.user?.role;
-
+  
       if (userRole !== "admin") {
         query.isBlocked = { $ne: true };
       }
-
+  
       if (search) {
         query.$or = [
           { title: { $regex: search, $options: "i" } },
@@ -190,10 +190,10 @@ class ProblemController {
       if (status && ["premium", "free"].includes(status)) {
         query.status = status;
       }
-
+  
       let userProblemStatus: { problemId: string; solved: boolean }[] = [];
       let problemsSolvedCount = 0;
-
+  
       if (userId) {
         const user = await User.findById(userId).select("problemsSolved solvedProblems");
         if (!user) {
@@ -205,9 +205,13 @@ class ProblemController {
           solved: true,
         }));
       }
-
+  
       const { problems, total } = await this.problemService.getProblemsPaginated(page, limit, query);
-
+      // Fetch total count of all problems in the database (excluding blocked ones for non-admins)
+      const totalProblemsInDb = await this.problemService.countProblems(
+        userRole === "admin" ? {} : { isBlocked: { $ne: true } }
+      );
+  
       if (solved === "true" || solved === "false") {
         const solvedFilter = solved === "true";
         const solvedProblemIds = userProblemStatus
@@ -230,6 +234,7 @@ class ProblemController {
               userProblemStatus,
               problemsSolvedCount,
               total: totalFiltered,
+              totalProblemsInDb, // Add total problems in DB
               totalPages: Math.ceil(totalFiltered / limit),
               currentPage: page,
             },
@@ -245,6 +250,7 @@ class ProblemController {
               userProblemStatus,
               problemsSolvedCount,
               total: 0,
+              totalProblemsInDb, // Add total problems in DB
               totalPages: 0,
               currentPage: page,
             },
@@ -252,9 +258,9 @@ class ProblemController {
           return;
         }
       }
-
+  
       const normalizedProblems = problems.map(filterProblemResponse);
-
+  
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
@@ -264,6 +270,7 @@ class ProblemController {
           userProblemStatus,
           problemsSolvedCount,
           total,
+          totalProblemsInDb, // Add total problems in DB
           totalPages: Math.ceil(total / limit),
           currentPage: page,
         },
@@ -272,7 +279,6 @@ class ProblemController {
       handleError(res, error);
     }
   }
-
   async generateAllBoilerplate(req: Request, res: Response): Promise<void> {
     try {
       const problems = await this.problemService.getProblemsPaginated(1, 1000);
