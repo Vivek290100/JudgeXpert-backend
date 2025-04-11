@@ -22,13 +22,14 @@ class ContestService implements IContestService {
     upcomingContests: number;
     endedContests: number;
   }> {
-    const { contests, total } = await this.contestRepository.findPaginated(page, limit, query);
+    const userQuery = { ...query, isBlocked: false };
+    const { contests, total } = await this.contestRepository.findPaginated(page, limit, userQuery);
     const now = new Date();
 
     const [activeCount, upcomingCount, endedCount] = await Promise.all([
-      this.contestRepository.countDocuments({ ...query, startTime: { $lte: now }, endTime: { $gte: now } }),
-      this.contestRepository.countDocuments({ ...query, startTime: { $gt: now } }),
-      this.contestRepository.countDocuments({ ...query, endTime: { $lt: now } }),
+      this.contestRepository.countDocuments({ ...userQuery, startTime: { $lte: now }, endTime: { $gte: now } }),
+      this.contestRepository.countDocuments({ ...userQuery, startTime: { $gt: now } }),
+      this.contestRepository.countDocuments({ ...userQuery, endTime: { $lt: now } }),
     ]);
 
     return {
@@ -44,7 +45,7 @@ class ContestService implements IContestService {
 
   async registerForContest(id: string, userId: string): Promise<{ message: string }> {
     const contest = await this.contestRepository.findById(id);
-    if (!contest) throw new BadRequestError(ErrorMessages.CONTEST_NOT_FOUND);
+    if (!contest || contest.isBlocked) throw new BadRequestError(ErrorMessages.CONTEST_NOT_FOUND);
     await this.contestRepository.addParticipant(id, userId);
     return { message: "Registered successfully" };
   }
