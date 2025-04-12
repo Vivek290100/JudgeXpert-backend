@@ -96,6 +96,22 @@ class ContestController {
       handleError(res, error);
     }
   }
+
+  async getRegisteredContests(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) throw new BadRequestError(ErrorMessages.UNAUTHORIZED_ACCESS);
+      const contestIds = await this.contestService.getRegisteredContests(userId);
+      sendResponse(res, {
+        success: true,
+        status: StatusCode.SUCCESS,
+        message: "Registered contests fetched successfully",
+        data: { contestIds },
+      });
+    } catch (error: any) {
+      handleError(res, error);
+    }
+  }
 }
 
 export default ContestController;
