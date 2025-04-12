@@ -24,7 +24,8 @@ userRouter
   .get(UserRoutes.GET_DISCUSSIONS, authMiddleware, discussionController.getDiscussions.bind(discussionController))
   .post(UserRoutes.ADD_REPLY, authMiddleware, discussionController.addReply.bind(discussionController))
   .get("/contests", authMiddleware, contestController.getContests.bind(contestController))
-  .post("/contests/:contestId/register", authMiddleware, contestController.registerForContest.bind(contestController));
+  .post("/contests/:contestId/register", authMiddleware, contestController.registerForContest.bind(contestController))
+  .get("/user/registered-contests",authMiddleware,contestController.getRegisteredContests.bind(contestController));
 
 userRouter
   .get(ProblemRoutes.GET_ALL_PROBLEMS, authMiddleware, problemController.getProblems.bind(problemController))

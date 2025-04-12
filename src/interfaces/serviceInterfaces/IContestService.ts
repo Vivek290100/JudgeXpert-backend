@@ -13,4 +13,5 @@ export interface IContestService {
   }>;
   registerForContest(id: string, userId: string): Promise<{ message: string }>;
   updateContestStatus(contestId: string, isBlocked: boolean): Promise<any>;
+  getRegisteredContests(userId: string): Promise<string[]>;
 }

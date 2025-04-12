@@ -1,3 +1,4 @@
+// Backend\src\repositories\ContestRepository.ts
 import { FilterQuery } from "mongoose";
 import BaseRepository from "./BaseRepository";
 import Contest from "../models/ContestModel";
@@ -11,18 +12,30 @@ class ContestRepository extends BaseRepository<any> implements IContestRepositor
   async findPaginated(page: number, limit: number, query: FilterQuery<any> = {}): Promise<{ contests: any[]; total: number }> {
     const skip = (page - 1) * limit;
     const [contests, total] = await Promise.all([
-      this.model.find(query).skip(skip).limit(limit).lean().exec(),
+      this.model
+        .find(query)
+        .skip(skip)
+        .limit(limit)
+        .populate("problems", "_id title difficulty")
+        .populate("participants", "_id userName")
+        .lean()
+        .exec(),
       this.model.countDocuments(query).exec(),
     ]);
     return { contests, total };
   }
 
   async addParticipant(contestId: string, userId: string): Promise<any> {
-    return this.model.findByIdAndUpdate(
-      contestId,
-      { $addToSet: { participants: userId } },
-      { new: true }
-    ).lean().exec();
+    return this.model
+      .findByIdAndUpdate(
+        contestId,
+        { $addToSet: { participants: userId } },
+        { new: true }
+      )
+      .populate("problems", "_id title difficulty")
+      .populate("participants", "_id userName")
+      .lean()
+      .exec();
   }
 
   async countDocuments(query: FilterQuery<any> = {}): Promise<number> {
@@ -30,11 +43,21 @@ class ContestRepository extends BaseRepository<any> implements IContestRepositor
   }
 
   async findByIdAndUpdate(contestId: string, update: Partial<any>, options: { new: boolean } = { new: true }): Promise<any> {
-    return this.model.findByIdAndUpdate(contestId, update, options).lean().exec();
+    return this.model
+      .findByIdAndUpdate(contestId, update, options)
+      .populate("problems", "_id title difficulty")
+      .populate("participants", "_id userName")
+      .lean()
+      .exec();
   }
 
   async findById(contestId: string): Promise<any> {
-    return this.model.findById(contestId).lean().exec();
+    return this.model
+      .findById(contestId)
+      .populate("problems", "_id title difficulty")
+      .populate("participants", "_id userName")
+      .lean()
+      .exec();
   }
 
   async create(data: any): Promise<any> {

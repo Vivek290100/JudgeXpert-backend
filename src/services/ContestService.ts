@@ -59,6 +59,14 @@ class ContestService implements IContestService {
     if (!contest) throw new BadRequestError(ErrorMessages.CONTEST_NOT_FOUND);
     return contest;
   }
+
+  async getRegisteredContests(userId: string): Promise<string[]> {
+    const contests = await this.contestRepository.findPaginated(1, 1000, {
+      participants: userId,
+      isBlocked: false,
+    });
+    return contests.contests.map((contest) => contest._id);
+  }
 }
 
 export default ContestService;
