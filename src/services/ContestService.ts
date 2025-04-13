@@ -1,3 +1,4 @@
+// Backend\src\services\ContestService.ts
 import { IContestRepository } from "../interfaces/repositoryInterfaces/IContestRepository";
 import { IContestService } from "../interfaces/serviceInterfaces/IContestService";
 import { BadRequestError, ErrorMessages } from "../utils/errors";
@@ -43,9 +44,23 @@ class ContestService implements IContestService {
     };
   }
 
+  async getContestById(contestId: string): Promise<any> {
+    const contest = await this.contestRepository.findById(contestId);
+    if (!contest || contest.isBlocked) {
+      throw new BadRequestError(ErrorMessages.CONTEST_NOT_FOUND);
+    }
+    return contest;
+  }
+
   async registerForContest(id: string, userId: string): Promise<{ message: string }> {
     const contest = await this.contestRepository.findById(id);
     if (!contest || contest.isBlocked) throw new BadRequestError(ErrorMessages.CONTEST_NOT_FOUND);
+    if (contest.participants.some((p: any) => p._id.toString() === userId)) {
+      throw new BadRequestError(ErrorMessages.USER_ALREADY_REGISTERED);
+    }
+    if (new Date(contest.startTime) < new Date()) {
+      throw new BadRequestError(ErrorMessages.CONTEST_ALREADY_STARTED);
+    }
     await this.contestRepository.addParticipant(id, userId);
     return { message: "Registered successfully" };
   }

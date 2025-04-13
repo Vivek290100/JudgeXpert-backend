@@ -45,7 +45,11 @@ export const ErrorMessages = {
   UNSUPPORTED_LANGUAGE: (lang: string) => `Unsupported language: ${lang}`,
   NO_ACTIVE_TEST_CASES: "No active test cases found",
 
-  DISCUSSION_NOT_FOUND: "discussions not found"
+  DISCUSSION_NOT_FOUND: "discussions not found",
+  USER_ALREADY_REGISTERED: "user already registered",
+  CONTEST_ALREADY_STARTED: "contest alresdy started",
+
+
 };
 
 // Error Classes
