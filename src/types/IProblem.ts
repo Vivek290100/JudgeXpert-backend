@@ -1,3 +1,4 @@
+// Backend\src\types\IProblem.ts
 import { Document, Types } from "mongoose";
 
 export interface IProblem extends Document {

@@ -1,3 +1,4 @@
+// Backend\src\controllers\ContestController.ts
 import { Request, Response } from "express";
 import { IContestService } from "../interfaces/serviceInterfaces/IContestService";
 import { sendResponse, handleError } from "../utils/responseUtils";
@@ -6,7 +7,7 @@ import { SuccessMessages } from "../utils/messages";
 import { BadRequestError, ErrorMessages } from "../utils/errors";
 
 interface AuthRequest extends Request {
-  user?: { userId: string };
+  user?: { userId: string, userName: string },
 }
 
 class ContestController {
@@ -28,6 +29,21 @@ class ContestController {
     }
   }
 
+  async getContestById(req: Request, res: Response): Promise<void> {
+    try {
+      const { contestId } = req.params;
+      const contest = await this.contestService.getContestById(contestId);
+      sendResponse(res, {
+        success: true,
+        status: StatusCode.SUCCESS,
+        message: SuccessMessages.CONTESTS_FETCHED,
+        data: { contest },
+      });
+    } catch (error: any) {
+      handleError(res, error);
+    }
+  }
+
   async registerForContest(req: AuthRequest, res: Response): Promise<void> {
     try {
       const { contestId } = req.params;
@@ -38,7 +54,10 @@ class ContestController {
         success: true,
         status: StatusCode.SUCCESS,
         message: result.message,
-        data: null,
+        data: {
+          message: result.message,
+          user: { _id: userId, userName: req.user?.userName || "Unknown" },
+        },
       });
     } catch (error: any) {
       handleError(res, error);
