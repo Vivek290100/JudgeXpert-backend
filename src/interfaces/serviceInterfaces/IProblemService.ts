@@ -18,7 +18,8 @@ export interface IProblemService {
     language: string,
     code: string,
     userId: string,
-    isRunOnly: boolean
+    isRunOnly: boolean,
+    contestId?: string
   ): Promise<{
     results: TestCaseResult[];
     passed: boolean;

@@ -16,7 +16,7 @@ class ContestRepository extends BaseRepository<any> implements IContestRepositor
         .find(query)
         .skip(skip)
         .limit(limit)
-        .populate("problems", "_id title difficulty")
+        .populate("problems", "_id title difficulty slug")
         .populate("participants", "_id userName")
         .lean()
         .exec(),
@@ -32,7 +32,7 @@ class ContestRepository extends BaseRepository<any> implements IContestRepositor
         { $addToSet: { participants: userId } },
         { new: true }
       )
-      .populate("problems", "_id title difficulty")
+      .populate("problems", "_id title difficulty slug")
       .populate("participants", "_id userName")
       .lean()
       .exec();
@@ -45,7 +45,7 @@ class ContestRepository extends BaseRepository<any> implements IContestRepositor
   async findByIdAndUpdate(contestId: string, update: Partial<any>, options: { new: boolean } = { new: true }): Promise<any> {
     return this.model
       .findByIdAndUpdate(contestId, update, options)
-      .populate("problems", "_id title difficulty")
+      .populate("problems", "_id title difficulty slug")
       .populate("participants", "_id userName")
       .lean()
       .exec();
@@ -54,7 +54,7 @@ class ContestRepository extends BaseRepository<any> implements IContestRepositor
   async findById(contestId: string): Promise<any> {
     return this.model
       .findById(contestId)
-      .populate("problems", "_id title difficulty")
+      .populate("problems", "_id title difficulty slug")
       .populate("participants", "_id userName")
       .lean()
       .exec();
