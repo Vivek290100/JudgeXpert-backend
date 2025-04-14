@@ -360,34 +360,35 @@ class ProblemService implements IProblemService {
     language: string,
     code: string,
     userId: string,
-    isRunOnly: boolean = false
+    isRunOnly: boolean = false,
+    contestId?: string
   ): Promise<{
     results: TestCaseResult[];
     passed: boolean;
     executionTime: number;
   }> {
     const problem = await this._problemRepository.findById(problemId);
-    if (!problem) throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
-  
+    if (!problem) throw new NotFoundError("Problem not found");
+
     const langConfig = getLanguageConfig(language);
-    if (!langConfig) throw new BadRequestError(ErrorMessages.UNSUPPORTED_LANGUAGE(language));
-  
+    if (!langConfig) throw new BadRequestError(`Unsupported language: ${language}`);
+
     const testCases = await TestCase.find({ problemId: problem._id, status: "active" });
-    if (!testCases.length) throw new NotFoundError(ErrorMessages.NO_ACTIVE_TEST_CASES);
-  
+    if (!testCases.length) throw new NotFoundError("No active test cases found");
+
     const PISTON_API_URL = process.env.PISTON_API_URL || "https://emkc.org/api/v2/piston/execute";
     const testCasesToRun = isRunOnly ? testCases.slice(0, 2) : testCases;
-    const functionName = problem.functionName || 'solution';
-  
+    const functionName = problem.functionName || "solution";
+
     const results: TestCaseResult[] = [];
     let totalExecutionTime = 0;
     let maxMemoryUsed = 0;
-  
+
     for (const testCase of testCasesToRun) {
       try {
-        const inputValues = testCase.inputs.map(i => formatValueForExecution(i.value, i.type)).join('\n');
+        const inputValues = testCase.inputs.map(i => formatValueForExecution(i.value, i.type)).join("\n");
         const executableCode = langConfig.wrapper(code, inputValues, functionName, problem.inputStructure);
-  
+
         const start = Date.now();
         const response = await axios.post<ExecutionResult>(PISTON_API_URL, {
           language: langConfig.name,
@@ -397,11 +398,11 @@ class ProblemService implements IProblemService {
           memoryLimit: problem.memory,
         });
         const duration = Date.now() - start;
-  
+
         totalExecutionTime += duration;
-  
+
         const { stdout, stderr, code: exitCode } = response.data.run;
-  
+
         let outputLines: string[];
         try {
           const parsed = JSON.parse(stdout.trim());
@@ -409,13 +410,13 @@ class ProblemService implements IProblemService {
             formatValueForExecution(Array.isArray(parsed) ? parsed[i] : parsed, o.type)
           );
         } catch {
-          outputLines = stdout.trim().split('\n').filter(line => line.trim());
+          outputLines = stdout.trim().split("\n").filter(line => line.trim());
         }
-  
+
         const expectedLines = testCase.outputs.map(o =>
           formatValueForExecution(o.value, o.type)
         );
-  
+
         const passed = outputLines.length === expectedLines.length &&
           outputLines.every((out, i) => {
             const expected = expectedLines[i];
@@ -426,12 +427,12 @@ class ProblemService implements IProblemService {
             }
             return out.trim() === expected.trim();
           }) && exitCode === 0;
-  
+
         results.push({
           testCaseIndex: testCase.index,
           input: inputValues,
-          expectedOutput: expectedLines.join('\n'),
-          actualOutput: outputLines.join('\n'),
+          expectedOutput: expectedLines.join("\n"),
+          actualOutput: outputLines.join("\n"),
           stderr: stderr.trim(),
           passed,
         });
@@ -439,17 +440,17 @@ class ProblemService implements IProblemService {
         console.error(`Execution failed for test case ${testCase.index}`, err);
         results.push({
           testCaseIndex: testCase.index,
-          input: testCase.inputs.map(i => formatValueForExecution(i.value, i.type)).join('\n'),
-          expectedOutput: testCase.outputs.map(o => formatValueForExecution(o.value, o.type)).join('\n'),
+          input: testCase.inputs.map(i => formatValueForExecution(i.value, i.type)).join("\n"),
+          expectedOutput: testCase.outputs.map(o => formatValueForExecution(o.value, o.type)).join("\n"),
           actualOutput: "",
           stderr: err instanceof Error ? err.message : "Execution failed",
           passed: false,
         });
       }
     }
-  
+
     const allPassed = results.every(r => r.passed);
-  
+
     if (!isRunOnly) {
       await new Submission({
         userId,
@@ -460,12 +461,13 @@ class ProblemService implements IProblemService {
         passed: allPassed,
         executionTime: totalExecutionTime,
         memoryUsed: maxMemoryUsed,
+        contestId: contestId || null,
       }).save();
-  
+
       if (allPassed) {
         const user = await User.findById(userId).select("solvedProblems");
-        if (!user) throw new NotFoundError(ErrorMessages.USER_NOT_FOUND);
-  
+        if (!user) throw new NotFoundError("User not found");
+
         const alreadySolved = user.solvedProblems.some(id => id.toString() === problemId);
         if (!alreadySolved) {
           await User.findByIdAndUpdate(userId, {
@@ -476,7 +478,7 @@ class ProblemService implements IProblemService {
         }
       }
     }
-  
+
     return { results, passed: allPassed, executionTime: totalExecutionTime };
   }
   

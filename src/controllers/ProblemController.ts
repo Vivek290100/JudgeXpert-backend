@@ -9,9 +9,9 @@ import { SuccessMessages } from "../utils/messages";
 import { BadRequestError, ErrorMessages, NotFoundError } from "../utils/errors";
 import { IProblem } from "../types/IProblem";
 import { FilterQuery } from "mongoose";
-import { ISubmission } from "../types/ISubmission";
 import fs from "fs/promises";
 import path from "path";
+import Contest from "../models/ContestModel";
 
 interface AdminAuthRequest extends AuthRequest {
   user?: { userId: string; role?: string };
@@ -422,7 +422,7 @@ class ProblemController {
 
 async executeCode(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const { problemId, language, code, isRunOnly = false } = req.body;
+    const { problemId, language, code, isRunOnly = false, contestId } = req.body;
     const userId = req.user?.userId;
 
     if (!userId) {
@@ -433,12 +433,25 @@ async executeCode(req: AuthRequest, res: Response): Promise<void> {
       throw new BadRequestError("Code is required");
     }
 
+    if (contestId && !isRunOnly) {
+      const contest = await Contest.findById(contestId);
+      if (!contest) {
+        throw new NotFoundError("Contest not found");
+      }
+      const now = new Date();
+      const endTime = new Date(contest.endTime);
+      if (now > endTime) {
+        throw new BadRequestError("Contest has ended. Submissions are no longer allowed.");
+      }
+    }
+
     const { results, passed, executionTime } = await this.problemService.executeCode(
       problemId,
       language,
       code,
       userId,
-      isRunOnly
+      isRunOnly,
+      contestId
     );
     console.log("ppppppppppppppppppppppppppppp",executionTime);
     
