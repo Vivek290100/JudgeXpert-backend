@@ -12,6 +12,7 @@ import { FilterQuery } from "mongoose";
 import fs from "fs/promises";
 import path from "path";
 import Contest from "../models/ContestModel";
+import { PopulatedContest } from "../types/ISubmission";
 
 interface AdminAuthRequest extends AuthRequest {
   user?: { userId: string; role?: string };
@@ -420,52 +421,38 @@ class ProblemController {
     }
   }
 
-async executeCode(req: AuthRequest, res: Response): Promise<void> {
-  try {
-    const { problemId, language, code, isRunOnly = false, contestId } = req.body;
-    const userId = req.user?.userId;
+  async executeCode(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const { problemId, language, code, isRunOnly = false, contestId } = req.body;
+      const userId = req.user?.userId;
 
-    if (!userId) {
-      throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
-    }
-
-    if (!code) {
-      throw new BadRequestError("Code is required");
-    }
-
-    if (contestId && !isRunOnly) {
-      const contest = await Contest.findById(contestId);
-      if (!contest) {
-        throw new NotFoundError("Contest not found");
+      if (!userId) {
+        throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
       }
-      const now = new Date();
-      const endTime = new Date(contest.endTime);
-      if (now > endTime) {
-        throw new BadRequestError("Contest has ended. Submissions are no longer allowed.");
+
+      if (!code) {
+        throw new BadRequestError("Code is required");
       }
+
+      const { results, passed, executionTime } = await this.problemService.executeCode(
+        problemId,
+        language,
+        code,
+        userId,
+        isRunOnly,
+        contestId
+      );
+
+      sendResponse(res, {
+        success: true,
+        status: StatusCode.SUCCESS,
+        message: passed ? SuccessMessages.CODE_EXECUTION_PASSED : SuccessMessages.CODE_EXECUTION_FAILED,
+        data: { results, executionTime },
+      });
+    } catch (error: any) {
+      handleError(res, error);
     }
-
-    const { results, passed, executionTime } = await this.problemService.executeCode(
-      problemId,
-      language,
-      code,
-      userId,
-      isRunOnly,
-      contestId
-    );
-    console.log("ppppppppppppppppppppppppppppp",executionTime);
-    
-
-    sendResponse(res, {
-      success: true,
-      status: StatusCode.SUCCESS,
-      message: passed ? SuccessMessages.CODE_EXECUTION_PASSED : SuccessMessages.CODE_EXECUTION_FAILED,
-      data: { results, executionTime },
-    });
-  } catch (error: any) {
-    handleError(res, error);
   }
-}
 
   async getUserSubmissions(req: AuthRequest, res: Response): Promise<void> {
     try {
@@ -473,21 +460,19 @@ async executeCode(req: AuthRequest, res: Response): Promise<void> {
       if (!userId) {
         throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
       }
-
-      const { problemSlug } = req.query;
+  
+      const { problemSlug, contestId } = req.query;
       let slug: string | undefined;
-
+  
       if (problemSlug !== undefined) {
         if (typeof problemSlug !== "string") {
           throw new BadRequestError(ErrorMessages.INVALID_INPUT("problemSlug must be a string"));
         }
         slug = problemSlug;
       }
-
+  
       const submissions = await this.problemService.getUserSubmissions(userId, slug);
-      console.log("ttttttttttttttttttt",submissions);
-      
-
+  
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
@@ -502,8 +487,30 @@ async executeCode(req: AuthRequest, res: Response): Promise<void> {
             code: sub.code,
             createdAt: sub.submittedAt.toISOString(),
             executionTime: sub.executionTime,
+            contestId: (sub.contestId as PopulatedContest)?._id?.toString() || null,
+            contestTitle: (sub.contestId as PopulatedContest)?.title || null,
           })),
         },
+      });
+    } catch (error: any) {
+      handleError(res, error);
+    }
+  }
+
+  async getTopParticipants(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const { problemId, contestId } = req.query;
+      if (!problemId || typeof problemId !== "string") {
+        throw new BadRequestError(ErrorMessages.PROBLEM_ID_REQUIRED);
+      }
+
+      const topParticipants = await this.problemService.getTopParticipants(problemId, contestId as string);
+
+      sendResponse(res, {
+        success: true,
+        status: StatusCode.SUCCESS,
+        message: "Top participants fetched successfully",
+        data: { topParticipants },
       });
     } catch (error: any) {
       handleError(res, error);
