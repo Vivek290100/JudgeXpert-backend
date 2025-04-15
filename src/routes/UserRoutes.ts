@@ -32,6 +32,7 @@ userRouter
   .get(ProblemRoutes.GET_ALL_PROBLEMS, authMiddleware, problemController.getProblems.bind(problemController))
   .get(ProblemRoutes.GET_PROBLEM_BY_SLUG, authMiddleware, problemController.getProblemBySlug.bind(problemController))
   .post(ProblemRoutes.EXECUTE_CODE, authMiddleware, problemController.executeCode.bind(problemController))
-  .get(ProblemRoutes.GET_SUBMISSIONS, authMiddleware, problemController.getUserSubmissions.bind(problemController));
+  .get(ProblemRoutes.GET_SUBMISSIONS, authMiddleware, problemController.getUserSubmissions.bind(problemController))
+  .get("/problems/top-participants", authMiddleware, problemController.getTopParticipants.bind(problemController))
 
 export default userRouter;

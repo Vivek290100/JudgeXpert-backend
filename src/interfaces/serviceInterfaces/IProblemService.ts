@@ -26,4 +26,5 @@ export interface IProblemService {
     executionTime: number;   
   }>;  countProblems(query?: FilterQuery<IProblem>): Promise<number>;
   getUserSubmissions(userId: string, problemSlug?: string): Promise<ISubmission[]>;
+  getTopParticipants(problemId: string, contestId?: string): Promise<any[]>;
 }

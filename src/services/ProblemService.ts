@@ -14,7 +14,8 @@ import { TestCaseResult } from "../types/ITestCaseResult";
 import { BadRequestError, ErrorMessages, NotFoundError } from "../utils/errors";
 import Submission from "../models/SubmissionModel";
 import User from "../models/UserModel";
-import { ISubmission } from "../types/ISubmission";
+import { ISubmission, PopulatedContest, PopulatedUser } from "../types/ISubmission";
+import Contest from "../models/ContestModel";
 
 class ProblemService implements IProblemService {
   constructor(private _problemRepository: IProblemRepository) {}
@@ -370,6 +371,18 @@ class ProblemService implements IProblemService {
     const problem = await this._problemRepository.findById(problemId);
     if (!problem) throw new NotFoundError("Problem not found");
 
+    // Check contest time if contestId is provided
+    if (contestId) {
+      const contest = await Contest.findById(contestId);
+      if (!contest) throw new NotFoundError("Contest not found");
+
+      const now = new Date();
+      const endTime = new Date(contest.endTime);
+      if (now > endTime) {
+        throw new BadRequestError("Contest has ended. You can no longer run or submit code.");
+      }
+    }
+
     const langConfig = getLanguageConfig(language);
     if (!langConfig) throw new BadRequestError(`Unsupported language: ${language}`);
 
@@ -474,7 +487,7 @@ class ProblemService implements IProblemService {
             $inc: { problemsSolved: 1 },
             $addToSet: { solvedProblems: problemId },
           });
-          await this._problemRepository.update(problemId, { $inc: { solvedCount: 1 } });
+          await this._problemRepository.incrementSolvedCount(problemId);
         }
       }
     }
@@ -489,9 +502,34 @@ class ProblemService implements IProblemService {
     return this._problemRepository.update(problemId, { $inc: { solvedCount: 1 } });
   }
 
+  async getTopParticipants(problemId: string, contestId?: string): Promise<any[]> {
+    const query: FilterQuery<ISubmission> = {
+      problemId,
+      passed: true,
+    };
+  
+    if (contestId) {
+      query.contestId = contestId;
+    }
+  
+    const submissions = await Submission.find(query)
+      .populate<{ userId: PopulatedUser }>("userId", "userName") // Explicitly type the populated userId
+      .sort({ executionTime: 1 })
+      .limit(5)
+      .lean()
+      .exec();
+  
+    return submissions.map(sub => ({
+      userId: sub.userId._id.toString(),
+      userName: sub.userId.userName,
+      executionTime: sub.executionTime,
+      submittedAt: sub.submittedAt,
+    }));
+  }
+
   async getUserSubmissions(userId: string, problemSlug?: string): Promise<ISubmission[]> {
     const query: FilterQuery<ISubmission> = { userId };
-
+  
     if (problemSlug) {
       const problem = await this._problemRepository.findBySlug(problemSlug);
       if (!problem) {
@@ -499,13 +537,14 @@ class ProblemService implements IProblemService {
       }
       query.problemId = problem._id.toString();
     }
-
+  
     const submissions = await Submission.find(query)
       .populate("problemId", "title slug")
+      .populate<{ contestId: PopulatedContest | null }>("contestId", "title") // Explicitly type the populated contestId
       .sort({ submittedAt: -1 })
       .lean()
       .exec();
-
+  
     return submissions;
   }
 }
