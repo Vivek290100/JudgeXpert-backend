@@ -210,7 +210,6 @@ class ProblemService implements IProblemService {
       throw new BadRequestError("Failed to save test cases to database");
     }
 
-    // Process boilerplate files
     const defaultCodeIds: Types.ObjectId[] = [];
     try {
       const boilerplateFiles = await fs.readdir(boilerplateDir);
@@ -245,7 +244,6 @@ class ProblemService implements IProblemService {
       throw new BadRequestError(`Failed to process boilerplate files in directory ${boilerplateDir}: ${(error as Error).message}`);
     }
 
-    // Update problem with testCaseIds and defaultCodeIds
     try {
       await this._problemRepository.upsertProblem(
         { _id: problem._id },
@@ -257,7 +255,6 @@ class ProblemService implements IProblemService {
       throw new BadRequestError("Failed to update problem with testCaseIds and defaultCodeIds");
     }
 
-    // Fetch the updated problem
     const updatedProblem = await this._problemRepository.findById(problem._id.toString());
     if (!updatedProblem) {
       console.error("Failed to fetch updated problem after processing");
@@ -371,7 +368,6 @@ class ProblemService implements IProblemService {
     const problem = await this._problemRepository.findById(problemId);
     if (!problem) throw new NotFoundError("Problem not found");
 
-    // Check contest time if contestId is provided
     if (contestId) {
       const contest = await Contest.findById(contestId);
       if (!contest) throw new NotFoundError("Contest not found");
@@ -495,7 +491,6 @@ class ProblemService implements IProblemService {
     return { results, passed: allPassed, executionTime: totalExecutionTime };
   }
   
-  
   async incrementSolvedCount(problemId: string): Promise<IProblem | null> {
     const problem = await this._problemRepository.findById(problemId);
     if (!problem) throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
@@ -503,6 +498,8 @@ class ProblemService implements IProblemService {
   }
 
   async getTopParticipants(problemId: string, contestId?: string): Promise<any[]> {
+    console.log("problemcontest idssss",problemId,contestId);
+    
     const query: FilterQuery<ISubmission> = {
       problemId,
       passed: true,
@@ -513,13 +510,29 @@ class ProblemService implements IProblemService {
     }
   
     const submissions = await Submission.find(query)
-      .populate<{ userId: PopulatedUser }>("userId", "userName") // Explicitly type the populated userId
-      .sort({ executionTime: 1 })
-      .limit(5)
+      .populate<{ userId: PopulatedUser }>("userId", "userName")
+      .sort({ submittedAt: -1, executionTime: 1 }) 
       .lean()
       .exec();
   
-    return submissions.map(sub => ({
+    const userSubmissionsMap: { [key: string]: any } = {};
+  
+    for (const sub of submissions) {
+      const userId = sub.userId._id.toString();
+      if (!userSubmissionsMap[userId]) {
+        userSubmissionsMap[userId] = sub;
+      }
+    }
+  
+    const topSubmissions = Object.values(userSubmissionsMap)
+      .sort((a, b) => {
+        const timeDiff = new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
+        if (timeDiff !== 0) return timeDiff;
+        return a.executionTime - b.executionTime;
+      })
+      .slice(0, 5);
+  
+    return topSubmissions.map(sub => ({
       userId: sub.userId._id.toString(),
       userName: sub.userId.userName,
       executionTime: sub.executionTime,
@@ -540,7 +553,7 @@ class ProblemService implements IProblemService {
   
     const submissions = await Submission.find(query)
       .populate("problemId", "title slug")
-      .populate<{ contestId: PopulatedContest | null }>("contestId", "title") // Explicitly type the populated contestId
+      .populate<{ contestId: PopulatedContest | null }>("contestId", "title")
       .sort({ submittedAt: -1 })
       .lean()
       .exec();
@@ -548,6 +561,5 @@ class ProblemService implements IProblemService {
     return submissions;
   }
 }
-
 
 export default ProblemService;
