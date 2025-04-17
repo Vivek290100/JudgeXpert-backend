@@ -16,6 +16,7 @@ import Submission from "../models/SubmissionModel";
 import User from "../models/UserModel";
 import { ISubmission, PopulatedContest, PopulatedUser } from "../types/ISubmission";
 import Contest from "../models/ContestModel";
+import { log } from "console";
 
 class ProblemService implements IProblemService {
   constructor(private _problemRepository: IProblemRepository) {}
@@ -266,7 +267,9 @@ class ProblemService implements IProblemService {
   }
 
   async getProblemById(id: string): Promise<IProblem | null> {
+    console.log("Problem:", "problemmmmmmmmmmmmmmm",id)
     const problem = await this._problemRepository.findById(id);
+    console.log("Problem:", problem)
     if (!problem) throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
     return problem;
   }
@@ -497,48 +500,6 @@ class ProblemService implements IProblemService {
     return this._problemRepository.update(problemId, { $inc: { solvedCount: 1 } });
   }
 
-  async getTopParticipants(problemId: string, contestId?: string): Promise<any[]> {
-    console.log("problemcontest idssss",problemId,contestId);
-    
-    const query: FilterQuery<ISubmission> = {
-      problemId,
-      passed: true,
-    };
-  
-    if (contestId) {
-      query.contestId = contestId;
-    }
-  
-    const submissions = await Submission.find(query)
-      .populate<{ userId: PopulatedUser }>("userId", "userName")
-      .sort({ submittedAt: -1, executionTime: 1 }) 
-      .lean()
-      .exec();
-  
-    const userSubmissionsMap: { [key: string]: any } = {};
-  
-    for (const sub of submissions) {
-      const userId = sub.userId._id.toString();
-      if (!userSubmissionsMap[userId]) {
-        userSubmissionsMap[userId] = sub;
-      }
-    }
-  
-    const topSubmissions = Object.values(userSubmissionsMap)
-      .sort((a, b) => {
-        const timeDiff = new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
-        if (timeDiff !== 0) return timeDiff;
-        return a.executionTime - b.executionTime;
-      })
-      .slice(0, 5);
-  
-    return topSubmissions.map(sub => ({
-      userId: sub.userId._id.toString(),
-      userName: sub.userId.userName,
-      executionTime: sub.executionTime,
-      submittedAt: sub.submittedAt,
-    }));
-  }
 
   async getUserSubmissions(userId: string, problemSlug?: string): Promise<ISubmission[]> {
     const query: FilterQuery<ISubmission> = { userId };

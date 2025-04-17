@@ -46,6 +46,8 @@ class ProblemController {
   }
 
   async getProblemById(req: Request, res: Response): Promise<void> {
+    console.log("getProblemById controller",req.params);
+    
     try {
       const { id } = req.params;
       if (!id || typeof id !== "string") {
@@ -497,38 +499,6 @@ class ProblemController {
     }
   }
 
-  async getTopParticipants(req: AuthRequest, res: Response): Promise<void> {
-    try {
-      const { problemId, contestId } = req.query;
-      if (!problemId || typeof problemId !== "string") {
-        throw new BadRequestError(ErrorMessages.PROBLEM_ID_REQUIRED);
-      }
-  
-      const problem = await this.problemService.getProblemById(problemId);
-      console.log("hhhhhhhhhhhhhhhh",problem);
-      
-      if (!problem) {
-        sendResponse(res, {
-          success: true,
-          status: StatusCode.SUCCESS,
-          message: "Problem not found, no top participants available",
-          data: { topParticipants: [] },
-        });
-        return;
-      }
-  
-      const topParticipants = await this.problemService.getTopParticipants(problemId, contestId as string);
-  
-      sendResponse(res, {
-        success: true,
-        status: StatusCode.SUCCESS,
-        message: "Top participants fetched successfully",
-        data: { topParticipants },
-      });
-    } catch (error: any) {
-      handleError(res, error);
-    }
-  }
 }
 
 export default ProblemController;

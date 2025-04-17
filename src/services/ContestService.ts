@@ -82,6 +82,36 @@ class ContestService implements IContestService {
     });
     return contests.contests.map((contest) => contest._id);
   }
+
+  async getProblemResultsForContest(contestId: string, problemId: string): Promise<any[]> {
+    // Validate contest and problem exist
+    const contest = await this.contestRepository.findById(contestId);
+    if (!contest) {
+      throw new BadRequestError(ErrorMessages.CONTEST_NOT_FOUND);
+    }
+    
+    const problemExists = contest.problems.some((p: any) => p._id.toString() === problemId);
+    if (!problemExists) {
+      throw new BadRequestError("Problem not found in this contest");
+    }
+    
+    // Find all successful submissions for this problem in this contest
+    // Sort by execution time (fastest first) and submission time (earliest first)
+    // This assumes you have a Submission model/collection
+    const submissions = await this.contestRepository.findTopSubmissions(
+      problemId, 
+      contestId,
+      10 // Limit to top 10 participants
+    );
+    
+    return submissions.map((submission: any) => ({
+      userId: submission.userId._id,
+      userName: submission.userId.userName,
+      executionTime: submission.executionTime,
+      submittedAt: submission.createdAt
+    }));
+  }
+
 }
 
 export default ContestService;

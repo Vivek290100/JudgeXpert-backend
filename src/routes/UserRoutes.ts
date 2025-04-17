@@ -26,13 +26,12 @@ userRouter
   .get("/contests", authMiddleware, contestController.getContests.bind(contestController))
   .get("/contests/:contestId", authMiddleware, contestController.getContestById.bind(contestController))
   .post("/contests/:contestId/register", authMiddleware, contestController.registerForContest.bind(contestController))
-  .get("/registered-contests",authMiddleware,contestController.getRegisteredContests.bind(contestController));
+  .get("/registered-contests",authMiddleware,contestController.getRegisteredContests.bind(contestController))
+  .get("/contests/:contestId/problems/:problemId/results", authMiddleware,contestController.getProblemResults.bind(contestController));
 
 userRouter
   .get(ProblemRoutes.GET_ALL_PROBLEMS, authMiddleware, problemController.getProblems.bind(problemController))
   .get(ProblemRoutes.GET_PROBLEM_BY_SLUG, authMiddleware, problemController.getProblemBySlug.bind(problemController))
   .post(ProblemRoutes.EXECUTE_CODE, authMiddleware, problemController.executeCode.bind(problemController))
   .get(ProblemRoutes.GET_SUBMISSIONS, authMiddleware, problemController.getUserSubmissions.bind(problemController))
-  .get("/problems/top-participants", authMiddleware, problemController.getTopParticipants.bind(problemController))
-
 export default userRouter;

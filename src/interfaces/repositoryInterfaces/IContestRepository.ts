@@ -8,4 +8,6 @@ export interface IContestRepository extends IBaseRepository<Document> {
   findByIdAndUpdate(contestId: string, update: Partial<any>, options?: { new: boolean }): Promise<any>;
   findById(contestId: string): Promise<any>;
   create(data: any): Promise<any>;
+  findTopSubmissions(problemId: string, contestId: string, limit?: number): Promise<any[]>;
+
 }

@@ -63,6 +63,20 @@ class ContestRepository extends BaseRepository<any> implements IContestRepositor
   async create(data: any): Promise<any> {
     return this.model.create(data);
   }
+  async findTopSubmissions(problemId: string, contestId: string, limit: number = 10): Promise<any[]> {
+    return this.model
+      .find({ 
+        problemId, 
+        contestId,
+        status: "Accepted" // Only include successful submissions
+      })
+      .sort({ executionTime: 1, createdAt: 1 }) // Sort by execution time (ascending) and submission time (ascending)
+      .limit(limit)
+      .populate('userId', '_id userName')
+      .lean()
+      .exec();
+  }
+  
 }
 
 export default ContestRepository;
