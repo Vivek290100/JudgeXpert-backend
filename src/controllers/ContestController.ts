@@ -1,4 +1,3 @@
-// Backend\src\controllers\ContestController.ts
 import { Request, Response } from "express";
 import { IContestService } from "../interfaces/serviceInterfaces/IContestService";
 import { sendResponse, handleError } from "../utils/responseUtils";
@@ -117,8 +116,6 @@ class ContestController {
   }
 
   async getRegisteredContests(req: AuthRequest, res: Response): Promise<void> {
-    console.log("registered contest");
-    
     try {
       const userId = req.user?.userId;
       if (!userId) throw new BadRequestError(ErrorMessages.UNAUTHORIZED_ACCESS);
@@ -138,7 +135,6 @@ class ContestController {
     try {
       const { contestId, problemId } = req.params;
       
-      // Validate contest exists and has ended
       const contest = await this.contestService.getContestById(contestId);
       const now = new Date();
       
@@ -146,7 +142,6 @@ class ContestController {
         throw new BadRequestError("Contest results are not available until the contest has ended");
       }
       
-      // Get top participants for this problem in this contest
       const topParticipants = await this.contestService.getProblemResultsForContest(
         contestId, 
         problemId
@@ -162,7 +157,6 @@ class ContestController {
       handleError(res, error);
     }
   }
-
 }
 
 export default ContestController;
