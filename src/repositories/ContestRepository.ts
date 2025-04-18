@@ -1,3 +1,4 @@
+// Backend\src\repositories\ContestRepository.ts
 import { FilterQuery, Types } from "mongoose";
 import BaseRepository from "./BaseRepository";
 import Contest from "../models/ContestModel";
@@ -101,7 +102,7 @@ class ContestRepository extends BaseRepository<any> implements IContestRepositor
       },
       {
         $lookup: {
-          from: "users", // Changed to lowercase "users"
+          from: "users",
           localField: "latestSubmission.userId",
           foreignField: "_id",
           as: "userId",
