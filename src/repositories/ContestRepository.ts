@@ -1,8 +1,9 @@
 // Backend\src\repositories\ContestRepository.ts
-import { FilterQuery } from "mongoose";
+import { FilterQuery, Types } from "mongoose";
 import BaseRepository from "./BaseRepository";
 import Contest from "../models/ContestModel";
 import { IContestRepository } from "../interfaces/repositoryInterfaces/IContestRepository";
+import Submission from "../models/SubmissionModel";
 
 class ContestRepository extends BaseRepository<any> implements IContestRepository {
   constructor() {
@@ -62,6 +63,65 @@ class ContestRepository extends BaseRepository<any> implements IContestRepositor
 
   async create(data: any): Promise<any> {
     return this.model.create(data);
+  }
+
+  async findTopSubmissions(problemId: string, contestId: string, limit: number = 10): Promise<any[]> {
+    return Submission
+      .find({ 
+        problemId: new Types.ObjectId(problemId),
+        contestId: new Types.ObjectId(contestId),
+        passed: true
+      })
+      .sort({ executionTime: 1, submittedAt: 1 })
+      .limit(limit)
+      .populate('userId', '_id userName')
+      .lean()
+      .exec();
+  }
+
+  async findLatestSubmissions(problemId: string, contestId: string, userIds?: string[]): Promise<any[]> {
+    const query: FilterQuery<any> = {
+      problemId: new Types.ObjectId(problemId),
+      contestId: new Types.ObjectId(contestId),
+      passed: true,
+    };
+    if (userIds) {
+      query.userId = { $in: userIds.map(id => new Types.ObjectId(id)) };
+    }
+
+    console.log("findLatestSubmissions query:", JSON.stringify(query, null, 2));
+
+    const result = await Submission.aggregate([
+      { $match: query },
+      { $sort: { submittedAt: -1 } },
+      {
+        $group: {
+          _id: "$userId",
+          latestSubmission: { $first: "$$ROOT" },
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "latestSubmission.userId",
+          foreignField: "_id",
+          as: "userId",
+        },
+      },
+      { $unwind: "$userId" },
+      {
+        $project: {
+          "userId._id": 1,
+          "userId.userName": 1,
+          "latestSubmission.executionTime": 1,
+          "latestSubmission.submittedAt": 1,
+        },
+      },
+    ]).exec();
+
+    console.log("findLatestSubmissions result:", JSON.stringify(result, null, 2));
+
+    return result;
   }
 }
 

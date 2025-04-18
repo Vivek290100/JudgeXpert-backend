@@ -1,4 +1,3 @@
-// Backend\src\services\ContestService.ts
 import { IContestRepository } from "../interfaces/repositoryInterfaces/IContestRepository";
 import { IContestService } from "../interfaces/serviceInterfaces/IContestService";
 import { BadRequestError, ErrorMessages } from "../utils/errors";
@@ -49,7 +48,14 @@ class ContestService implements IContestService {
     if (!contest || contest.isBlocked) {
       throw new BadRequestError(ErrorMessages.CONTEST_NOT_FOUND);
     }
-    return contest;
+
+    // Fetch latest submissions for each participant per problem
+    const latestSubmissions = await this.getLatestSubmissionsForContest(contestId, contest.problems);
+
+    return {
+      ...contest,
+      latestSubmissions,
+    };
   }
 
   async registerForContest(id: string, userId: string): Promise<{ message: string }> {
@@ -81,6 +87,50 @@ class ContestService implements IContestService {
       isBlocked: false,
     });
     return contests.contests.map((contest) => contest._id);
+  }
+
+  async getProblemResultsForContest(contestId: string, problemId: string): Promise<any[]> {
+    const contest = await this.contestRepository.findById(contestId);
+    if (!contest) {
+      throw new BadRequestError(ErrorMessages.CONTEST_NOT_FOUND);
+    }
+    
+    const problemExists = contest.problems.some((p: any) => p._id.toString() === problemId);
+    if (!problemExists) {
+      throw new BadRequestError("Problem not found in this contest");
+    }
+    
+    const submissions = await this.contestRepository.findLatestSubmissions(
+      problemId,
+      contestId,
+      contest.participants.map((p: any) => p._id.toString())
+    );
+    
+    return submissions.map((submission: any) => ({
+      userId: submission.userId._id,
+      userName: submission.userId.userName,
+      executionTime: submission.latestSubmission.executionTime,
+      submittedAt: submission.latestSubmission.submittedAt,
+    }));
+  }
+
+  private async getLatestSubmissionsForContest(contestId: string, problems: any[]): Promise<any> {
+    const latestSubmissions: any = {};
+
+    for (const problem of problems) {
+      const submissions = await this.contestRepository.findLatestSubmissions(
+        problem._id.toString(),
+        contestId
+      );
+      latestSubmissions[problem._id] = submissions.map((submission: any) => ({
+        userId: submission.userId._id,
+        userName: submission.userId.userName,
+        executionTime: submission.latestSubmission.executionTime,
+        submittedAt: submission.latestSubmission.submittedAt,
+      }));
+    }
+
+    return latestSubmissions;
   }
 }
 

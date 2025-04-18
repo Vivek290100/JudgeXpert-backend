@@ -1,4 +1,3 @@
-// Backend\src\controllers\ContestController.ts
 import { Request, Response } from "express";
 import { IContestService } from "../interfaces/serviceInterfaces/IContestService";
 import { sendResponse, handleError } from "../utils/responseUtils";
@@ -126,6 +125,33 @@ class ContestController {
         status: StatusCode.SUCCESS,
         message: "Registered contests fetched successfully",
         data: { contestIds },
+      });
+    } catch (error: any) {
+      handleError(res, error);
+    }
+  }
+
+  async getProblemResults(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const { contestId, problemId } = req.params;
+      
+      const contest = await this.contestService.getContestById(contestId);
+      const now = new Date();
+      
+      if (new Date(contest.endTime) > now) {
+        throw new BadRequestError("Contest results are not available until the contest has ended");
+      }
+      
+      const topParticipants = await this.contestService.getProblemResultsForContest(
+        contestId, 
+        problemId
+      );
+      
+      sendResponse(res, {
+        success: true,
+        status: StatusCode.SUCCESS,
+        message: "Problem results fetched successfully",
+        data: { topParticipants },
       });
     } catch (error: any) {
       handleError(res, error);

@@ -23,16 +23,19 @@ export const initializeSocket = (server: http.Server) => {
   });
 
   io.on("connection", (socket: Socket) => {
-
     const userId = socket.handshake.query.userId as string;
 
+    if (userId) userSocketMap[userId] = socket.id;
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
     socket.on("disconnect", () => {
-      if (userId && userId in userSocketMap) {
-        delete userSocketMap[userId];
-      }
+      if (userId && userId in userSocketMap) delete userSocketMap[userId];
       io.emit("getOnlineUsers", Object.keys(userSocketMap));
+    });
+
+    socket.on("joinProblemRoom", (problemId: string) => {
+      socket.join(problemId);
+      console.log(`User ${socket.id} joined room: ${problemId}`);
     });
 
     socket.on("newMessage", async (data: { problemId: string; message: any }) => {
@@ -58,9 +61,12 @@ export const initializeSocket = (server: http.Server) => {
       }
     });
 
-    socket.on("joinProblemRoom", (problemId: string) => {
-      socket.join(problemId);
-      console.log(`User ${socket.id} joined room: ${problemId}`);
+    socket.on("upvoteDiscussion", (data: { discussionId: string; problemId: string }) => {
+      io.to(data.problemId).emit("discussionUpvoted", { discussionId: data.discussionId });
+    });
+
+    socket.on("upvoteReply", (data: { discussionId: string; replyIndex: number; problemId: string }) => {
+      io.to(data.problemId).emit("replyUpvoted", { discussionId: data.discussionId, replyIndex: data.replyIndex });
     });
   });
 

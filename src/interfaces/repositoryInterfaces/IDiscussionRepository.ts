@@ -1,4 +1,4 @@
-import { Document, FilterQuery } from "mongoose";
+import { Document, FilterQuery, Types } from "mongoose";
 import { IBaseRepository } from "../baseRepositoryInterface/IBaseRepositories";
 import { IDiscussion } from "../../types/IDiscussion";
 
@@ -15,7 +15,18 @@ export interface IDiscussionRepository extends IBaseRepository<IDiscussion & Doc
 
   addReplyAndPopulate(
     discussionId: string,
-    userId: string,
+    userId: Types.ObjectId | string,
     message: string
+  ): Promise<IDiscussion>;
+
+  upvoteDiscussion(
+    discussionId: string,
+    userId: Types.ObjectId | string
+  ): Promise<IDiscussion>;
+
+  upvoteReply(
+    discussionId: string,
+    replyIndex: number,
+    userId: Types.ObjectId | string
   ): Promise<IDiscussion>;
 }
