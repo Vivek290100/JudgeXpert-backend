@@ -18,4 +18,15 @@ export interface IDiscussionService {
     userId: string,
     message: string
   ): Promise<IDiscussion>;
+
+  upvoteDiscussion(
+    discussionId: string,
+    userId: string
+  ): Promise<IDiscussion>;
+
+  upvoteReply(
+    discussionId: string,
+    replyIndex: number,
+    userId: string
+  ): Promise<IDiscussion>;
 }
