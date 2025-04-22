@@ -11,4 +11,6 @@ export interface IContestRepository extends IBaseRepository<Document> {
   create(data: any): Promise<any>;
   findTopSubmissions(problemId: string, contestId: string, limit?: number): Promise<any[]>;
   findLatestSubmissions(problemId: string, contestId: string, userIds?: string[]): Promise<any[]>;
+
+  findByStartTimeRange(start: Date, end: Date): Promise<any[]>;
 }

@@ -89,8 +89,6 @@ class ContestRepository extends BaseRepository<any> implements IContestRepositor
       query.userId = { $in: userIds.map(id => new Types.ObjectId(id)) };
     }
 
-    console.log("findLatestSubmissions query:", JSON.stringify(query, null, 2));
-
     const result = await Submission.aggregate([
       { $match: query },
       { $sort: { submittedAt: -1 } },
@@ -119,9 +117,16 @@ class ContestRepository extends BaseRepository<any> implements IContestRepositor
       },
     ]).exec();
 
-    console.log("findLatestSubmissions result:", JSON.stringify(result, null, 2));
-
     return result;
+  }
+
+  async findByStartTimeRange(start: Date, end: Date): Promise<any[]> {
+    return this.model
+      .find({ startTime: { $gte: start, $lte: end } })
+      .populate("problems", "_id title difficulty slug")
+      .populate("participants", "_id userName")
+      .lean()
+      .exec();
   }
 }
 
