@@ -1,3 +1,5 @@
+// Backend\src\utils\dependencies.ts
+import { Server } from "socket.io";
 import UserRepository from "../repositories/UserRepository";
 import RefreshTokenRepository from "../repositories/RefreshTokenRepository";
 import { IUserRepository } from "../interfaces/repositoryInterfaces/IUserRepository";
@@ -26,59 +28,96 @@ import DiscussionService from "../services/DiscussionService";
 import { IDiscussionService } from "../interfaces/serviceInterfaces/IDiscussionService";
 import DiscussionController from "../controllers/DiscussionController";
 import { IContestRepository } from "../interfaces/repositoryInterfaces/IContestRepository";
-import { IContestService } from "../interfaces/serviceInterfaces/IContestService"; // Ensure correct path
+import { IContestService } from "../interfaces/serviceInterfaces/IContestService";
 import ContestRepository from "../repositories/ContestRepository";
 import ContestService from "../services/ContestService";
 import ContestController from "../controllers/ContestController";
+import { INotificationService } from "../interfaces/serviceInterfaces/INotificationService";
+import NotificationService from "../services/NotificationService";
 
-const userRepository: IUserRepository = new UserRepository();
-const redisService: IRedisService = new RedisService(
-  CONFIG.REDIS_USERNAME,
-  CONFIG.REDIS_PASSWORD,
-  CONFIG.REDIS_HOST,
-  CONFIG.REDIS_PORT
-);
-const refreshTokenRepository: IRefreshTokenRepository = new RefreshTokenRepository(redisService);
-const jwtService: IJWTService = new JWTService(CONFIG.ACCESS_TOKEN_SECRET, CONFIG.REFRESH_TOKEN_SECRET);
-const emailService: IEmailService = new BrevoEmailService(CONFIG.BREVO_API_KEY);
+interface DependenciesType {
+  userRepository: IUserRepository;
+  refreshTokenRepository: IRefreshTokenRepository;
+  jwtService: IJWTService;
+  emailService: IEmailService;
+  redisService: IRedisService;
+  userService: IUserService;
+  userController: UserController;
+  adminService: IAdminService;
+  adminController: AdminController;
+  problemRepository: IProblemRepository;
+  problemService: IProblemService;
+  problemController: ProblemController;
+  discussionRepository: IDiscussionRepository;
+  discussionService: IDiscussionService;
+  discussionController: DiscussionController;
+  contestRepository: IContestRepository;
+  contestService: IContestService;
+  contestController: ContestController;
+  notificationService?: INotificationService;
+  io?: Server;
+}
 
-const userService: IUserService = new UserService(userRepository, refreshTokenRepository, jwtService, emailService, redisService);
-const userController = new UserController(userService);
+const initializeDependencies = (io?: Server): DependenciesType => {
+  const userRepository: IUserRepository = new UserRepository();
+  const redisService: IRedisService = new RedisService(
+    CONFIG.REDIS_USERNAME,
+    CONFIG.REDIS_PASSWORD,
+    CONFIG.REDIS_HOST,
+    CONFIG.REDIS_PORT
+  );
+  const refreshTokenRepository: IRefreshTokenRepository = new RefreshTokenRepository(redisService);
+  const jwtService: IJWTService = new JWTService(CONFIG.ACCESS_TOKEN_SECRET, CONFIG.REFRESH_TOKEN_SECRET);
+  const emailService: IEmailService = new BrevoEmailService(CONFIG.BREVO_API_KEY);
 
-const adminService: IAdminService = new AdminService(userRepository);
-const adminController = new AdminController(adminService);
+  const userService: IUserService = new UserService(userRepository, refreshTokenRepository, jwtService, emailService, redisService);
+  const userController = new UserController(userService);
 
-const problemRepository: IProblemRepository = new ProblemRepository();
-const problemService: IProblemService = new ProblemService(problemRepository);
-const problemController = new ProblemController(problemService);
+  const adminService: IAdminService = new AdminService(userRepository);
+  const adminController = new AdminController(adminService);
 
-const discussionRepository: IDiscussionRepository = new DiscussionRepository();
-const discussionService: IDiscussionService = new DiscussionService(discussionRepository, problemRepository);
-const discussionController = new DiscussionController(discussionService);
+  const problemRepository: IProblemRepository = new ProblemRepository();
+  const problemService: IProblemService = new ProblemService(problemRepository);
+  const problemController = new ProblemController(problemService);
 
-const contestRepository: IContestRepository = new ContestRepository();
-const contestService: IContestService = new ContestService(contestRepository);
-const contestController = new ContestController(contestService);
+  const discussionRepository: IDiscussionRepository = new DiscussionRepository();
+  const discussionService: IDiscussionService = new DiscussionService(discussionRepository, problemRepository);
+  const discussionController = new DiscussionController(discussionService);
 
-export const Dependencies = {
-  userRepository,
-  refreshTokenRepository,
-  jwtService,
-  emailService,
-  redisService,
-  userService,
-  userController,
-  adminService,
-  adminController,
-  problemRepository,
-  problemService,
-  problemController,
-  discussionRepository,
-  discussionService,
-  discussionController,
-  contestRepository,
-  contestService,
-  contestController,
+  const contestRepository: IContestRepository = new ContestRepository();
+  const contestService: IContestService = new ContestService(contestRepository);
+  const contestController = new ContestController(contestService);
+
+  const notificationService: INotificationService = new NotificationService(contestRepository, io!);
+
+  return {
+    userRepository,
+    refreshTokenRepository,
+    jwtService,
+    emailService,
+    redisService,
+    userService,
+    userController,
+    adminService,
+    adminController,
+    problemRepository,
+    problemService,
+    problemController,
+    discussionRepository,
+    discussionService,
+    discussionController,
+    contestRepository,
+    contestService,
+    contestController,
+    notificationService,
+    io,
+  };
+};
+
+export const Dependencies = initializeDependencies();
+
+export const initializeWithSocket = (io: Server) => {
+  return initializeDependencies(io);
 };
 
 export default Dependencies;

@@ -1,7 +1,9 @@
+// Backend\src\utils\socket.ts
 import { Server, Socket } from "socket.io";
 import http from "http";
 import { CONFIG } from "../config/config";
 import Discussion from "../models/DiscussionModel";
+import { Dependencies } from "./dependencies";
 
 interface UserSocketMap {
   [userId: string]: string;
@@ -20,22 +22,35 @@ export const initializeSocket = (server: http.Server) => {
       methods: ["GET", "POST"],
       credentials: true,
     },
+    pingTimeout: 60000,
+    pingInterval: 25000,
   });
 
   io.on("connection", (socket: Socket) => {
     const userId = socket.handshake.query.userId as string;
 
-    if (userId) userSocketMap[userId] = socket.id;
-    io.emit("getOnlineUsers", Object.keys(userSocketMap));
-
-    socket.on("disconnect", () => {
-      if (userId && userId in userSocketMap) delete userSocketMap[userId];
+    if (userId) {
+      userSocketMap[userId] = socket.id;
+      socket.join(userId);
       io.emit("getOnlineUsers", Object.keys(userSocketMap));
+      Dependencies.notificationService?.sendPendingNotifications(userId).catch((error) => {
+      });
+    }
+
+    socket.on("disconnect", (reason) => {
+      if (userId && userId in userSocketMap) {
+        delete userSocketMap[userId];
+        socket.leave(userId);
+        io.emit("getOnlineUsers", Object.keys(userSocketMap));
+      }
+    });
+
+    socket.on("error", (error) => {
+      console.error(`Socket error for user ${userId || "unknown"}: ${error.message}`);
     });
 
     socket.on("joinProblemRoom", (problemId: string) => {
       socket.join(problemId);
-      console.log(`User ${socket.id} joined room: ${problemId}`);
     });
 
     socket.on("newMessage", async (data: { problemId: string; message: any }) => {
