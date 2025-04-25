@@ -34,6 +34,12 @@ import ContestService from "../services/ContestService";
 import ContestController from "../controllers/ContestController";
 import { INotificationService } from "../interfaces/serviceInterfaces/INotificationService";
 import NotificationService from "../services/NotificationService";
+import { ISubscriptionService } from "../interfaces/serviceInterfaces/ISubscriptionService";
+import SubscriptionService from "../services/SubscriptionService";
+import SubscriptionController from "../controllers/SubscriptionController";
+import { ISubscriptionRepository } from "../interfaces/repositoryInterfaces/ISubscriptionRepository";
+import SubscriptionRepository from "../repositories/SubscriptionRepository";
+
 
 interface DependenciesType {
   userRepository: IUserRepository;
@@ -54,6 +60,9 @@ interface DependenciesType {
   contestRepository: IContestRepository;
   contestService: IContestService;
   contestController: ContestController;
+  subscriptionRepository: ISubscriptionRepository;
+  subscriptionService: ISubscriptionService;
+  subscriptionController: SubscriptionController;
   notificationService?: INotificationService;
   io?: Server;
 }
@@ -88,6 +97,10 @@ const initializeDependencies = (io?: Server): DependenciesType => {
   const contestService: IContestService = new ContestService(contestRepository);
   const contestController = new ContestController(contestService);
 
+  const subscriptionRepository: ISubscriptionRepository = new SubscriptionRepository();
+  const subscriptionService: ISubscriptionService = new SubscriptionService(subscriptionRepository, userRepository);
+  const subscriptionController = new SubscriptionController(subscriptionService);
+
   const notificationService: INotificationService = new NotificationService(contestRepository, io!);
 
   return {
@@ -109,6 +122,9 @@ const initializeDependencies = (io?: Server): DependenciesType => {
     contestRepository,
     contestService,
     contestController,
+    subscriptionRepository,
+    subscriptionService,
+    subscriptionController,
     notificationService,
     io,
   };

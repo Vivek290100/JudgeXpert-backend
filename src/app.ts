@@ -28,6 +28,8 @@ app.use(
   })
 );
 
+app.use("/subscriptions/webhook", express.raw({ type: "application/json" }));
+
 
 app.use(express.json());
 app.use(responseLogger); 
