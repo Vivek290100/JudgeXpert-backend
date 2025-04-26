@@ -5,6 +5,11 @@ import { sendResponse } from "../utils/responseUtils";
 import { AuthRequest } from "../middlewares/authMiddleware";
 import { StatusCode } from "../utils/statusCode";
 import { CONFIG } from "../config/config";
+import Stripe from "stripe";
+
+const stripe = new Stripe(CONFIG.STRIPE_SECRET_KEY, {
+  apiVersion: "2025-03-31.basil",
+});
 
 export default class SubscriptionController {
   private subscriptionService: ISubscriptionService;
@@ -56,8 +61,6 @@ export default class SubscriptionController {
     const signature = req.headers["stripe-signature"] as string;
     const payload = req.body;
 
-    console.log("Webhook payload type:", typeof payload, Buffer.isBuffer(payload));
-    console.log("Webhook payload:", payload.toString());
 
     try {
       if (!Buffer.isBuffer(payload)) {
@@ -70,7 +73,6 @@ export default class SubscriptionController {
         message: "Webhook processed successfully",
       });
     } catch (error: any) {
-      console.error("Webhook error:", error.message);
       sendResponse(res, {
         success: false,
         status: StatusCode.BAD_REQUEST,
@@ -93,6 +95,7 @@ export default class SubscriptionController {
 
     try {
       const subscription = await this.subscriptionService.findByUserId(userId);
+
       if (!subscription) {
         sendResponse(res, {
           success: true,
@@ -122,6 +125,79 @@ export default class SubscriptionController {
     }
   }
 
+  async getCheckoutSession(req: AuthRequest, res: Response): Promise<void> {
+    const sessionId = req.query.session_id as string;
+    const userId = req.user?.userId;
+
+    if (!sessionId || !userId || !Types.ObjectId.isValid(userId)) {
+      sendResponse(res, {
+        success: false,
+        status: StatusCode.BAD_REQUEST,
+        message: "Invalid session ID or user ID",
+      });
+      return;
+    }
+
+    try {
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+
+      const sessionUserId = session.metadata?.userId;
+      if (!sessionUserId) {
+        console.error(`No userId in session metadata for session ${sessionId}`);
+        sendResponse(res, {
+          success: false,
+          status: StatusCode.BAD_REQUEST,
+          message: "No user ID found in session metadata",
+        });
+        return;
+      }
+      if (sessionUserId !== userId) {
+        sendResponse(res, {
+          success: false,
+          status: StatusCode.BAD_REQUEST,
+          message: "Session does not belong to this user",
+        });
+        return;
+      }
+
+      if (session.payment_status !== "paid") {
+        sendResponse(res, {
+          success: false,
+          status: StatusCode.BAD_REQUEST,
+          message: "Payment not completed",
+        });
+        return;
+      }
+
+      if (!session.subscription) {
+        sendResponse(res, {
+          success: false,
+          status: StatusCode.BAD_REQUEST,
+          message: "Subscription not created",
+        });
+        return;
+      }
+
+      sendResponse(res, {
+        success: true,
+        status: StatusCode.SUCCESS,
+        message: "Checkout session verified",
+        data: {
+          sessionId: session.id,
+          paymentStatus: session.payment_status,
+          subscriptionId: session.subscription,
+        },
+      });
+    } catch (error: any) {
+      sendResponse(res, {
+        success: false,
+        status: StatusCode.INTERNAL_SERVER_ERROR,
+        message: error.message || "Failed to retrieve checkout session",
+      });
+    }
+  }
+
   async handleSuccess(req: AuthRequest, res: Response): Promise<void> {
     const sessionId = req.query.session_id as string;
     const userId = req.user?.userId;
@@ -146,7 +222,7 @@ export default class SubscriptionController {
         return;
       }
 
-      res.redirect(`${CONFIG.FRONTEND_URL}/user/subscription?success=true`);
+      res.redirect(`${CONFIG.FRONTEND_URL}/user/subscription/success?session_id=${sessionId}`);
     } catch (error: any) {
       sendResponse(res, {
         success: false,

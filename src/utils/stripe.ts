@@ -31,7 +31,7 @@ export class StripeUtils {
         },
       ],
       mode: "subscription",
-      success_url: `${CONFIG.FRONTEND_URL}/user/subscription?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: successUrl, 
       cancel_url: cancelUrl,
       metadata,
       subscription_data: {

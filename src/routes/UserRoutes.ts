@@ -37,7 +37,8 @@ userRouter
     authMiddleware,
     subscriptionController.getCurrentSubscription.bind(subscriptionController)
   )
-  .get("/subscriptions/success", authMiddleware, subscriptionController.handleSuccess.bind(subscriptionController));
+  .get("/subscriptions/success", authMiddleware, subscriptionController.handleSuccess.bind(subscriptionController))
+  .get("/subscriptions/session", authMiddleware, subscriptionController.getCheckoutSession.bind(subscriptionController));
 
 userRouter
   .get(ProblemRoutes.GET_ALL_PROBLEMS, authMiddleware, problemController.getProblems.bind(problemController))
