@@ -10,6 +10,8 @@ export const CONFIG = {
   DB_URI: process.env.MONGO_URI || "",
 
   FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:4000",
+  BACKEND_URL: process.env.BACKEND_URL || "http://localhost:5000",
+  
 
   OTP_EXPIRY_SECONDS: Number(process.env.OTP_EXPIRY_SECONDS) || 300,
 

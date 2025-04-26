@@ -6,6 +6,7 @@ import { ISubscriptionService } from "../interfaces/serviceInterfaces/ISubscript
 import { StripeUtils } from "../utils/stripe";
 import { CONFIG } from "../config/config";
 import Stripe from "stripe";
+import { CustomStripeSubscription } from "../types/IStripe";
 
 export default class SubscriptionService implements ISubscriptionService {
   constructor(
@@ -27,7 +28,7 @@ export default class SubscriptionService implements ISubscriptionService {
 
     const priceId = planId === "monthly" ? CONFIG.STRIPE_MONTHLY_PRICE_ID : CONFIG.STRIPE_YEARLY_PRICE_ID;
 
-    console.log(`Creating checkout session for plan: ${planId}, priceId: ${priceId}`); // Debug
+    console.log(`Creating checkout session for plan: ${planId}, priceId: ${priceId}`);
 
     if (!priceId) {
       throw new Error(`Price ID for ${planId} plan is not configured`);
@@ -44,8 +45,8 @@ export default class SubscriptionService implements ISubscriptionService {
     const session = await StripeUtils.createCheckoutSession(
       stripeCustomerId,
       priceId,
-      `${CONFIG.FRONTEND_URL}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
-      `${CONFIG.FRONTEND_URL}/subscription/canceled`,
+      `${CONFIG.FRONTEND_URL}/user/subscription?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      `${CONFIG.FRONTEND_URL}/user/subscription?canceled=true`,
       { userId, planId }
     );
 
@@ -61,7 +62,7 @@ export default class SubscriptionService implements ISubscriptionService {
       case "customer.subscription.created":
       case "customer.subscription.updated":
       case "customer.subscription.deleted":
-        const subscription = event.data.object as Stripe.Subscription;
+        const subscription = event.data.object as CustomStripeSubscription;
         console.log(`Subscription metadata: ${JSON.stringify(subscription.metadata || {})}`);
         await this.handleSubscriptionEvent(event.type, subscription);
         break;
@@ -70,7 +71,7 @@ export default class SubscriptionService implements ISubscriptionService {
     }
   }
 
-  private async handleSubscriptionEvent(eventType: string, subscription: Stripe.Subscription): Promise<void> {
+  private async handleSubscriptionEvent(eventType: string, subscription: CustomStripeSubscription): Promise<void> {
     const stripeSubscriptionId = subscription.id;
     const userId = subscription.metadata?.userId;
 
@@ -88,22 +89,22 @@ export default class SubscriptionService implements ISubscriptionService {
     }
   }
 
-  private async handleSubscriptionUpdate(subscription: Stripe.Subscription): Promise<void> {
+  private async handleSubscriptionUpdate(subscription: CustomStripeSubscription): Promise<void> {
     const stripeSubscriptionId = subscription.id;
     const userId = subscription.metadata?.userId;
 
-    // Safely access current_period_end
-    const currentPeriodEnd = (subscription as any).current_period_end
-      ? new Date((subscription as any).current_period_end * 1000)
-      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // Fallback: 30 days from now
+    // Fallback for current_period_end in case it's undefined
+    const currentPeriodEnd = subscription.current_period_end
+      ? new Date(subscription.current_period_end * 1000)
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // Default to 30 days from now
 
     const subscriptionData: Partial<ISubscription> = {
       userId: new Types.ObjectId(userId!),
-      stripeCustomerId: subscription.customer as string,
+      stripeCustomerId: subscription.customer,
       stripeSubscriptionId,
       planId:
         subscription.metadata?.planId ||
-        (subscription.items.data[0].price.id === CONFIG.STRIPE_MONTHLY_PRICE_ID ? "monthly" : "yearly"),
+        (subscription.items.data[0]?.price.id === CONFIG.STRIPE_MONTHLY_PRICE_ID ? "monthly" : "yearly"),
       status: subscription.status as ISubscription["status"],
       currentPeriodEnd,
     };
@@ -123,7 +124,7 @@ export default class SubscriptionService implements ISubscriptionService {
     await this.updateUserPremiumStatus(userId!);
   }
 
-  private async handleSubscriptionDeleted(subscription: Stripe.Subscription): Promise<void> {
+  private async handleSubscriptionDeleted(subscription: CustomStripeSubscription): Promise<void> {
     const stripeSubscriptionId = subscription.id;
     const userId = subscription.metadata?.userId;
 
@@ -151,6 +152,29 @@ export default class SubscriptionService implements ISubscriptionService {
     console.log(`Updating user ${userId} isPremium: ${isPremium}`);
 
     await this.userRepository.update(userId, { isPremium });
+  }
+
+  async checkAndUpdateExpiredSubscription(userId: string): Promise<ISubscription | null> {
+    if (!Types.ObjectId.isValid(userId)) {
+      throw new Error("Invalid user ID format");
+    }
+
+    const subscription = await this.subscriptionRepository.findByUserId(userId);
+    if (!subscription) {
+      return null;
+    }
+
+    const now = new Date();
+    if (subscription.status === "active" && subscription.currentPeriodEnd <= now) {
+      await this.subscriptionRepository.update(subscription._id!.toString(), {
+        status: "canceled",
+        currentPeriodEnd: now,
+      });
+      await this.updateUserPremiumStatus(userId);
+      console.log(`Subscription ${subscription._id} marked as expired for user ${userId}`);
+    }
+
+    return subscription;
   }
 
   async findByUserId(userId: string): Promise<ISubscription | null> {

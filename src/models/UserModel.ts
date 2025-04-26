@@ -19,6 +19,7 @@ const userSchema = new Schema<IUser>({
   github: { type: String },
   linkedin: { type: String },
   stripeCustomerId: { type: String },
+  subscriptionEnd: { type: Date },
   
 });
 

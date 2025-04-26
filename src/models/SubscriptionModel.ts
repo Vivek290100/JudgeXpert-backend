@@ -24,8 +24,7 @@ const subscriptionSchema = new Schema<ISubscription>({
   status: {
     type: String,
     required: true,
-    enum: ["active", "canceled", "past_due", "unpaid", "incomplete"],
-  },
+    enum: ["active", "canceled", "incomplete", "incomplete_expired", "past_due", "trialing", "unpaid"],  },
   currentPeriodEnd: {
     type: Date,
     required: true,

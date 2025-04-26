@@ -4,6 +4,7 @@ import { ISubscriptionService } from "../interfaces/serviceInterfaces/ISubscript
 import { sendResponse } from "../utils/responseUtils";
 import { AuthRequest } from "../middlewares/authMiddleware";
 import { StatusCode } from "../utils/statusCode";
+import { CONFIG } from "../config/config";
 
 export default class SubscriptionController {
   private subscriptionService: ISubscriptionService;
@@ -50,13 +51,14 @@ export default class SubscriptionController {
       });
     }
   }
+
   async handleWebhook(req: Request, res: Response): Promise<void> {
     const signature = req.headers["stripe-signature"] as string;
     const payload = req.body;
-  
+
     console.log("Webhook payload type:", typeof payload, Buffer.isBuffer(payload));
     console.log("Webhook payload:", payload.toString());
-  
+
     try {
       if (!Buffer.isBuffer(payload)) {
         throw new Error("Webhook payload is not a Buffer");
@@ -116,6 +118,40 @@ export default class SubscriptionController {
         success: false,
         status: StatusCode.INTERNAL_SERVER_ERROR,
         message: error.message || "Failed to retrieve subscription",
+      });
+    }
+  }
+
+  async handleSuccess(req: AuthRequest, res: Response): Promise<void> {
+    const sessionId = req.query.session_id as string;
+    const userId = req.user?.userId;
+
+    if (!sessionId || !userId || !Types.ObjectId.isValid(userId)) {
+      sendResponse(res, {
+        success: false,
+        status: StatusCode.BAD_REQUEST,
+        message: "Invalid session ID or user ID",
+      });
+      return;
+    }
+
+    try {
+      const subscription = await this.subscriptionService.findByUserId(userId);
+      if (!subscription) {
+        sendResponse(res, {
+          success: false,
+          status: StatusCode.BAD_REQUEST,
+          message: "No subscription found",
+        });
+        return;
+      }
+
+      res.redirect(`${CONFIG.FRONTEND_URL}/user/subscription?success=true`);
+    } catch (error: any) {
+      sendResponse(res, {
+        success: false,
+        status: StatusCode.INTERNAL_SERVER_ERROR,
+        message: error.message || "Failed to verify subscription",
       });
     }
   }
