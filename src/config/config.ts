@@ -10,6 +10,8 @@ export const CONFIG = {
   DB_URI: process.env.MONGO_URI || "",
 
   FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:4000",
+  BACKEND_URL: process.env.BACKEND_URL || "http://localhost:5000",
+  
 
   OTP_EXPIRY_SECONDS: Number(process.env.OTP_EXPIRY_SECONDS) || 300,
 
@@ -40,4 +42,11 @@ export const CONFIG = {
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || "",
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || "",
   GOOGLE_CALLBACK_URL: process.env.GOOGLE_CALLBACK_URL || "",
+
+  //Stripe
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || "",
+  STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY || "",
+  STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || "",
+  STRIPE_MONTHLY_PRICE_ID: process.env.STRIPE_MONTHLY_PRICE_ID || "",
+  STRIPE_YEARLY_PRICE_ID: process.env.STRIPE_YEARLY_PRICE_ID || "",
 };

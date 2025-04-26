@@ -19,6 +19,8 @@ export interface IUser extends Document {
   isGoogleAuth: boolean;
   github?: string;      
   linkedin?: string;
+  stripeCustomerId?: string;
+  subscriptionEnd?: Date;
 }
 
 

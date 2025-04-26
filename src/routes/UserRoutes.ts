@@ -1,11 +1,11 @@
-import { Router } from "express";
+import express, { Router } from "express";
 import authMiddleware from "../middlewares/authMiddleware";
 import { ProblemRoutes, UserRoutes } from "../utils/constants";
 import { Dependencies } from "../utils/dependencies";
 import { upload } from "../utils/multer";
 
 const userRouter = Router();
-const { userController, problemController, discussionController, contestController } = Dependencies;
+const { userController, problemController, discussionController, contestController, subscriptionController } = Dependencies;
 
 userRouter
   .post(UserRoutes.SIGNUP, userController.signUpUser.bind(userController))
@@ -29,7 +29,15 @@ userRouter
   .get("/contests/:contestId", authMiddleware, contestController.getContestById.bind(contestController))
   .post("/contests/:contestId/register", authMiddleware, contestController.registerForContest.bind(contestController))
   .get("/registered-contests",authMiddleware,contestController.getRegisteredContests.bind(contestController))
-  .get("/contests/:contestId/problems/:problemId/results", authMiddleware,contestController.getProblemResults.bind(contestController));
+  .get("/contests/:contestId/problems/:problemId/results", authMiddleware,contestController.getProblemResults.bind(contestController))
+  .post("/subscriptions/checkout", authMiddleware, subscriptionController.createCheckoutSession.bind(subscriptionController))
+  .post("/subscriptions/webhook", express.raw({ type: "application/json" }), subscriptionController.handleWebhook.bind(subscriptionController))
+  .get(
+    "/subscriptions/current",
+    authMiddleware,
+    subscriptionController.getCurrentSubscription.bind(subscriptionController)
+  )
+  .get("/subscriptions/success", authMiddleware, subscriptionController.handleSuccess.bind(subscriptionController));
 
 userRouter
   .get(ProblemRoutes.GET_ALL_PROBLEMS, authMiddleware, problemController.getProblems.bind(problemController))

@@ -11,13 +11,15 @@ const userSchema = new Schema<IUser>({
   profileImage: { type: String, default: "" },
   joinedDate: { type: Date, default: Date.now },
   problemsSolved: { type: Number, default: 0 },  
-  solvedProblems: [{ type: Schema.Types.ObjectId, ref: "Problem" }], // Array of problem IDs
+  solvedProblems: [{ type: Schema.Types.ObjectId, ref: "Problem" }],
   rank: { type: Number, default: 0 },
   isBlocked: { type: Boolean, default: false },
   isPremium: { type: Boolean, default: false },
   isGoogleAuth: { type: Boolean, default: false },
   github: { type: String },
   linkedin: { type: String },
+  stripeCustomerId: { type: String },
+  subscriptionEnd: { type: Date },
   
 });
 
