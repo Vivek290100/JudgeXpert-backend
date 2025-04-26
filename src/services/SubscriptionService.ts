@@ -26,9 +26,13 @@ export default class SubscriptionService implements ISubscriptionService {
     const user = await this.userRepository.findById(userId);
     if (!user) throw new Error("User not found");
 
+    const existingSubscription = await this.subscriptionRepository.findByUserId(userId);
+    if (existingSubscription && existingSubscription.status === "active" && existingSubscription.currentPeriodEnd > new Date()) {
+      throw new Error("You already have an active subscription. Only one subscription is allowed at a time. Please wait until it expires or cancel it.");
+    }
+
     const priceId = planId === "monthly" ? CONFIG.STRIPE_MONTHLY_PRICE_ID : CONFIG.STRIPE_YEARLY_PRICE_ID;
 
-    console.log(`Creating checkout session for plan: ${planId}, priceId: ${priceId}`);
 
     if (!priceId) {
       throw new Error(`Price ID for ${planId} plan is not configured`);
@@ -45,18 +49,19 @@ export default class SubscriptionService implements ISubscriptionService {
     const session = await StripeUtils.createCheckoutSession(
       stripeCustomerId,
       priceId,
-      `${CONFIG.FRONTEND_URL}/user/subscription?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      `${CONFIG.FRONTEND_URL}/user/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
       `${CONFIG.FRONTEND_URL}/user/subscription?canceled=true`,
       { userId, planId }
     );
 
+
     return { checkoutUrl: session.url! };
   }
 
+  // Rest of the SubscriptionService code remains unchanged
   async handleWebhookEvent(payload: Buffer, signature: string): Promise<void> {
     const event = StripeUtils.constructWebhookEvent(payload, signature);
 
-    console.log(`Processing webhook event: ${event.type}, ID: ${event.id}`);
 
     switch (event.type) {
       case "customer.subscription.created":
@@ -75,8 +80,6 @@ export default class SubscriptionService implements ISubscriptionService {
     const stripeSubscriptionId = subscription.id;
     const userId = subscription.metadata?.userId;
 
-    console.log(`${eventType} - stripeSubscriptionId: ${stripeSubscriptionId}, userId: ${userId}`);
-    console.log(`Subscription metadata: ${JSON.stringify(subscription.metadata || {})}`);
 
     if (!userId || !Types.ObjectId.isValid(userId)) {
       throw new Error("Invalid or missing user ID in subscription metadata");
@@ -93,10 +96,9 @@ export default class SubscriptionService implements ISubscriptionService {
     const stripeSubscriptionId = subscription.id;
     const userId = subscription.metadata?.userId;
 
-    // Fallback for current_period_end in case it's undefined
     const currentPeriodEnd = subscription.current_period_end
       ? new Date(subscription.current_period_end * 1000)
-      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // Default to 30 days from now
+      : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
     const subscriptionData: Partial<ISubscription> = {
       userId: new Types.ObjectId(userId!),
@@ -109,16 +111,13 @@ export default class SubscriptionService implements ISubscriptionService {
       currentPeriodEnd,
     };
 
-    console.log("Subscription data to save:", subscriptionData);
 
     const existingSubscription = await this.subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId);
 
     if (existingSubscription) {
       await this.subscriptionRepository.update(existingSubscription._id!.toString(), subscriptionData);
-      console.log(`Updated subscription: ${existingSubscription._id}`);
     } else {
       await this.subscriptionRepository.create(subscriptionData);
-      console.log(`Created subscription: ${stripeSubscriptionId}`);
     }
 
     await this.updateUserPremiumStatus(userId!);
@@ -135,7 +134,6 @@ export default class SubscriptionService implements ISubscriptionService {
         status: "canceled",
         currentPeriodEnd: new Date(),
       });
-      console.log(`Canceled subscription: ${existingSubscription._id}`);
       await this.updateUserPremiumStatus(userId!);
     }
   }
@@ -149,7 +147,6 @@ export default class SubscriptionService implements ISubscriptionService {
     const now = new Date();
     const isPremium = subscription && subscription.status === "active" && subscription.currentPeriodEnd > now;
 
-    console.log(`Updating user ${userId} isPremium: ${isPremium}`);
 
     await this.userRepository.update(userId, { isPremium });
   }
@@ -171,10 +168,24 @@ export default class SubscriptionService implements ISubscriptionService {
         currentPeriodEnd: now,
       });
       await this.updateUserPremiumStatus(userId);
-      console.log(`Subscription ${subscription._id} marked as expired for user ${userId}`);
     }
 
     return subscription;
+  }
+
+  async checkAndUpdateExpiredSubscriptions(): Promise<void> {
+    const subscriptions = await this.subscriptionRepository.findAll();
+    const now = new Date();
+
+    for (const subscription of subscriptions) {
+      if (subscription.status === "active" && subscription.currentPeriodEnd <= now) {
+        await this.subscriptionRepository.update(subscription._id!.toString(), {
+          status: "canceled",
+          currentPeriodEnd: now,
+        });
+        await this.updateUserPremiumStatus(subscription.userId.toString());
+      }
+    }
   }
 
   async findByUserId(userId: string): Promise<ISubscription | null> {

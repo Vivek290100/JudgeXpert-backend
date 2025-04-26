@@ -6,4 +6,5 @@ export interface ISubscriptionService {
   updateUserPremiumStatus(userId: string): Promise<void>;
   findByUserId(userId: string): Promise<ISubscription | null>;
   checkAndUpdateExpiredSubscription(userId: string): Promise<ISubscription | null>;
+  checkAndUpdateExpiredSubscriptions(): Promise<void>;
 }

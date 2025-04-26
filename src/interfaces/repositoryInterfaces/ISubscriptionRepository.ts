@@ -1,4 +1,3 @@
-// Backend\src\interfaces\repositoryInterfaces\ISubscriptionRepository.ts
 import { ISubscription } from "../../types/ISubscription";
 
 export interface ISubscriptionRepository {
@@ -6,4 +5,5 @@ export interface ISubscriptionRepository {
   findByUserId(userId: string): Promise<ISubscription | null>;
   findByStripeSubscriptionId(stripeSubscriptionId: string): Promise<ISubscription | null>;
   update(subscriptionId: string, update: Partial<ISubscription>): Promise<ISubscription | null>;
+  findAll(): Promise<ISubscription[]>;
 }

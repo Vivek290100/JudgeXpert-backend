@@ -17,6 +17,7 @@ const Dependencies = initializeWithSocket(io);
 cron.schedule("*/10 * * * * *", async () => {
   try {
     await Dependencies.notificationService!.checkAndNotifyStartingContests();
+    await Dependencies.subscriptionService!.checkAndUpdateExpiredSubscriptions();
   } catch (error) {
     console.error("Error checking starting contests:", error);
   }
