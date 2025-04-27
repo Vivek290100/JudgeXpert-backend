@@ -61,7 +61,6 @@ export default class SubscriptionController {
     const signature = req.headers["stripe-signature"] as string;
     const payload = req.body;
 
-
     try {
       if (!Buffer.isBuffer(payload)) {
         throw new Error("Webhook payload is not a Buffer");
@@ -112,6 +111,7 @@ export default class SubscriptionController {
         message: "Subscription retrieved successfully",
         data: {
           planId: subscription.planId,
+          price: subscription.price,
           status: subscription.status,
           currentPeriodEnd: subscription.currentPeriodEnd,
         },
@@ -140,7 +140,6 @@ export default class SubscriptionController {
 
     try {
       const session = await stripe.checkout.sessions.retrieve(sessionId);
-
 
       const sessionUserId = session.metadata?.userId;
       if (!sessionUserId) {
