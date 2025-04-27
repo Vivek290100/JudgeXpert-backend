@@ -21,6 +21,10 @@ const subscriptionSchema = new Schema<ISubscription>({
     type: String,
     required: true,
   },
+  price: {
+    type: Number,
+    required: true,
+  },
   status: {
     type: String,
     required: true,

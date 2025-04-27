@@ -32,7 +32,7 @@ export default class SubscriptionService implements ISubscriptionService {
     }
 
     const priceId = planId === "monthly" ? CONFIG.STRIPE_MONTHLY_PRICE_ID : CONFIG.STRIPE_YEARLY_PRICE_ID;
-
+    const price = planId === "monthly" ? 29900 : 249900; // Price in paise (₹299 or ₹2499)
 
     if (!priceId) {
       throw new Error(`Price ID for ${planId} plan is not configured`);
@@ -54,21 +54,17 @@ export default class SubscriptionService implements ISubscriptionService {
       { userId, planId }
     );
 
-
     return { checkoutUrl: session.url! };
   }
 
-  // Rest of the SubscriptionService code remains unchanged
   async handleWebhookEvent(payload: Buffer, signature: string): Promise<void> {
     const event = StripeUtils.constructWebhookEvent(payload, signature);
-
 
     switch (event.type) {
       case "customer.subscription.created":
       case "customer.subscription.updated":
       case "customer.subscription.deleted":
         const subscription = event.data.object as CustomStripeSubscription;
-        console.log(`Subscription metadata: ${JSON.stringify(subscription.metadata || {})}`);
         await this.handleSubscriptionEvent(event.type, subscription);
         break;
       default:
@@ -79,7 +75,6 @@ export default class SubscriptionService implements ISubscriptionService {
   private async handleSubscriptionEvent(eventType: string, subscription: CustomStripeSubscription): Promise<void> {
     const stripeSubscriptionId = subscription.id;
     const userId = subscription.metadata?.userId;
-
 
     if (!userId || !Types.ObjectId.isValid(userId)) {
       throw new Error("Invalid or missing user ID in subscription metadata");
@@ -100,17 +95,19 @@ export default class SubscriptionService implements ISubscriptionService {
       ? new Date(subscription.current_period_end * 1000)
       : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
+    const planId = subscription.metadata?.planId ||
+      (subscription.items.data[0]?.price.id === CONFIG.STRIPE_MONTHLY_PRICE_ID ? "monthly" : "yearly");
+    const price = planId === "monthly" ? 299 : 2499; 
+
     const subscriptionData: Partial<ISubscription> = {
       userId: new Types.ObjectId(userId!),
       stripeCustomerId: subscription.customer,
       stripeSubscriptionId,
-      planId:
-        subscription.metadata?.planId ||
-        (subscription.items.data[0]?.price.id === CONFIG.STRIPE_MONTHLY_PRICE_ID ? "monthly" : "yearly"),
+      planId,
+      price,
       status: subscription.status as ISubscription["status"],
       currentPeriodEnd,
     };
-
 
     const existingSubscription = await this.subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId);
 
@@ -146,7 +143,6 @@ export default class SubscriptionService implements ISubscriptionService {
     const subscription = await this.subscriptionRepository.findByUserId(userId);
     const now = new Date();
     const isPremium = subscription && subscription.status === "active" && subscription.currentPeriodEnd > now;
-
 
     await this.userRepository.update(userId, { isPremium });
   }
