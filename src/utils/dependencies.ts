@@ -87,19 +87,19 @@ const initializeDependencies = (io?: Server): DependenciesType => {
 
   const problemRepository: IProblemRepository = new ProblemRepository();
   const problemService: IProblemService = new ProblemService(problemRepository);
-  const problemController = new ProblemController(problemService);
-
+  
   const discussionRepository: IDiscussionRepository = new DiscussionRepository();
   const discussionService: IDiscussionService = new DiscussionService(discussionRepository, problemRepository);
   const discussionController = new DiscussionController(discussionService);
-
+  
   const contestRepository: IContestRepository = new ContestRepository();
   const contestService: IContestService = new ContestService(contestRepository);
   const contestController = new ContestController(contestService);
-
+  
   const subscriptionRepository: ISubscriptionRepository = new SubscriptionRepository();
   const subscriptionService: ISubscriptionService = new SubscriptionService(subscriptionRepository, userRepository);
   const subscriptionController = new SubscriptionController(subscriptionService);
+  const problemController = new ProblemController(problemService, subscriptionService);
 
   const notificationService: INotificationService = new NotificationService(contestRepository, io!);
 

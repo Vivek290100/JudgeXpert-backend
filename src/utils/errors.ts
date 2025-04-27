@@ -28,6 +28,8 @@ export const ErrorMessages = {
   GOOGLE_LOGIN_FAILED: (error: string) => `Google login failed: ${error}`,
   INVALID_PAGINATION_PARAMS: "invalid pagination params",
   CONTEST_NOT_FOUND: "Contest not found",
+  PREMIUM_ACCESS_REQUIRED: "Premium access required",
+
 
   
   // Problem
