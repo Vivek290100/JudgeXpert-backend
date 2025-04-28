@@ -1,4 +1,3 @@
-// \Backend\src\utils\statusCode.ts
 export enum StatusCode {
     SUCCESS = 200,
     CREATED = 201,

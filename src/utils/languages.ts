@@ -21,7 +21,7 @@ const parseInput = (input: string, language: string, inputStructure: { name: str
       }
       return formatValueForInnerType(parsed, type);
     } catch {
-      return `"${line.trim()}"`; // Fallback to string
+      return `"${line.trim()}"`; 
     }
   });
 };

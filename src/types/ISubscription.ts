@@ -1,5 +1,4 @@
 
-//Backend\src\types\ISubscription.ts
 import { Types } from "mongoose";
 
 export interface ISubscription {

@@ -23,22 +23,18 @@ userRouter
   .post(UserRoutes.CREATE_DISCUSSION, authMiddleware, discussionController.createDiscussion.bind(discussionController))
   .get(UserRoutes.GET_DISCUSSIONS, authMiddleware, discussionController.getDiscussions.bind(discussionController))
   .post(UserRoutes.ADD_REPLY, authMiddleware, discussionController.addReply.bind(discussionController))
-  .post(`/discussions/:discussionId/upvote`, authMiddleware, discussionController.upvoteDiscussion.bind(discussionController))
-  .post(`/discussions/:discussionId/replies/:replyIndex/upvote`, authMiddleware, discussionController.upvoteReply.bind(discussionController))
-  .get("/contests", authMiddleware, contestController.getContests.bind(contestController))
-  .get("/contests/:contestId", authMiddleware, contestController.getContestById.bind(contestController))
-  .post("/contests/:contestId/register", authMiddleware, contestController.registerForContest.bind(contestController))
-  .get("/registered-contests",authMiddleware,contestController.getRegisteredContests.bind(contestController))
-  .get("/contests/:contestId/problems/:problemId/results", authMiddleware,contestController.getProblemResults.bind(contestController))
-  .post("/subscriptions/checkout", authMiddleware, subscriptionController.createCheckoutSession.bind(subscriptionController))
-  .post("/subscriptions/webhook", express.raw({ type: "application/json" }), subscriptionController.handleWebhook.bind(subscriptionController))
-  .get(
-    "/subscriptions/current",
-    authMiddleware,
-    subscriptionController.getCurrentSubscription.bind(subscriptionController)
-  )
-  .get("/subscriptions/success", authMiddleware, subscriptionController.handleSuccess.bind(subscriptionController))
-  .get("/subscriptions/session", authMiddleware, subscriptionController.getCheckoutSession.bind(subscriptionController));
+  .post(UserRoutes.DISCCUSS_UPVOTE, authMiddleware, discussionController.upvoteDiscussion.bind(discussionController))
+  .post(UserRoutes.DISCCUSS_REPLY_UPVOTE, authMiddleware, discussionController.upvoteReply.bind(discussionController))
+  .get(UserRoutes.CONTESTS, authMiddleware, contestController.getContests.bind(contestController))
+  .get(UserRoutes.CONTESTS_CONTEST_ID, authMiddleware, contestController.getContestById.bind(contestController))
+  .post(UserRoutes.CONTESTS_ID_REGISTER, authMiddleware, contestController.registerForContest.bind(contestController))
+  .get(UserRoutes.REGISTERED_CONTESTS,authMiddleware,contestController.getRegisteredContests.bind(contestController))
+  .get(UserRoutes.CONTEST_CONTESTID_PROBLEM_PROBLEMID_RESULT, authMiddleware,contestController.getProblemResults.bind(contestController))
+  .post(UserRoutes.SUBSCRIPTION_CHECKOUT, authMiddleware, subscriptionController.createCheckoutSession.bind(subscriptionController))
+  .post(UserRoutes.SUBSCRIPTION_WEBHOOK, express.raw({ type: "application/json" }), subscriptionController.handleWebhook.bind(subscriptionController))
+  .get(UserRoutes.SUBSCRIPTION_CURRENT,authMiddleware,subscriptionController.getCurrentSubscription.bind(subscriptionController))
+  .get(UserRoutes.SUBSCRIPTION_SUCCESS, authMiddleware, subscriptionController.handleSuccess.bind(subscriptionController))
+  .get(UserRoutes.SUBSCRIPTION_SESSION, authMiddleware, subscriptionController.getCheckoutSession.bind(subscriptionController));
 
 userRouter
   .get(ProblemRoutes.GET_ALL_PROBLEMS, authMiddleware, problemController.getProblems.bind(problemController))

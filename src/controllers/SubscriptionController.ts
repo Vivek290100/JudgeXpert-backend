@@ -72,6 +72,7 @@ export default class SubscriptionController {
         message: "Webhook processed successfully",
       });
     } catch (error: any) {
+      console.error("Webhook error:", error);
       sendResponse(res, {
         success: false,
         status: StatusCode.BAD_REQUEST,
@@ -142,16 +143,7 @@ export default class SubscriptionController {
       const session = await stripe.checkout.sessions.retrieve(sessionId);
 
       const sessionUserId = session.metadata?.userId;
-      if (!sessionUserId) {
-        console.error(`No userId in session metadata for session ${sessionId}`);
-        sendResponse(res, {
-          success: false,
-          status: StatusCode.BAD_REQUEST,
-          message: "No user ID found in session metadata",
-        });
-        return;
-      }
-      if (sessionUserId !== userId) {
+      if (!sessionUserId || sessionUserId !== userId) {
         sendResponse(res, {
           success: false,
           status: StatusCode.BAD_REQUEST,
@@ -211,12 +203,31 @@ export default class SubscriptionController {
     }
 
     try {
-      const subscription = await this.subscriptionService.findByUserId(userId);
-      if (!subscription) {
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      if (session.metadata?.userId !== userId) {
         sendResponse(res, {
           success: false,
           status: StatusCode.BAD_REQUEST,
-          message: "No subscription found",
+          message: "Session does not belong to this user",
+        });
+        return;
+      }
+
+      if (session.payment_status !== "paid" || !session.subscription) {
+        sendResponse(res, {
+          success: false,
+          status: StatusCode.BAD_REQUEST,
+          message: "Payment not completed or subscription not created",
+        });
+        return;
+      }
+
+      const subscription = await this.subscriptionService.findByUserId(userId);
+      if (!subscription || subscription.status !== "active") {
+        sendResponse(res, {
+          success: false,
+          status: StatusCode.BAD_REQUEST,
+          message: "No active subscription found",
         });
         return;
       }

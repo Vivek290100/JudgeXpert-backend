@@ -1,4 +1,3 @@
-// Backend\src\types\IContest.ts
 import { Document, Types } from "mongoose";
 
 export interface IContest extends Document {
