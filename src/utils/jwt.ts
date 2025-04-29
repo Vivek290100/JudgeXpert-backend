@@ -1,4 +1,3 @@
-// utils/jwt.ts
 import jwt from "jsonwebtoken";
 import { IJWTService } from "../interfaces/utilInterfaces/IJWTService";
 

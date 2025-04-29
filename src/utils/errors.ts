@@ -1,5 +1,3 @@
-// Backend\src\utils\errors.ts
-
 import { StatusCode } from "./statusCode";
 
 export const ErrorMessages = {
@@ -31,7 +29,6 @@ export const ErrorMessages = {
   PREMIUM_ACCESS_REQUIRED: "Premium access required",
 
 
-  
   // Problem
   PROBLEM_NOT_FOUND: "Problem not found",
   PROBLEM_ID_REQUIRED: "Problem ID is required",
@@ -50,7 +47,6 @@ export const ErrorMessages = {
   DISCUSSION_NOT_FOUND: "discussions not found",
   USER_ALREADY_REGISTERED: "user already registered",
   CONTEST_ALREADY_STARTED: "contest alresdy started",
-
 
 };
 

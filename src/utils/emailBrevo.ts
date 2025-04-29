@@ -1,4 +1,3 @@
-// utils/emailBrevo.ts
 import axios from "axios";
 import { IEmailService } from "../interfaces/utilInterfaces/IEmailService";
 

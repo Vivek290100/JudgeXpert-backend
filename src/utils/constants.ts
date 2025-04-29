@@ -1,4 +1,3 @@
-// Backend\src\constants\routes.ts
 export const UserRoutes = {
     SIGNUP: "/signup",
     LOGIN: "/login",
@@ -15,8 +14,18 @@ export const UserRoutes = {
     GET_DISCUSSIONS: "/discussions/:problemId",
     ADD_REPLY: "/discussions/reply",
     LEADERBOARD: "/leaderboard", 
-  
-   
+    DISCCUSS_UPVOTE: `/discussions/:discussionId/upvote`,
+    DISCCUSS_REPLY_UPVOTE: `/discussions/:discussionId/replies/:replyIndex/upvote`,
+    CONTESTS: "/contests",
+    CONTESTS_CONTEST_ID: "/contests/:contestId",
+    CONTESTS_ID_REGISTER: "/contests/:contestId/register",
+    REGISTERED_CONTESTS: "/registered-contests",
+    CONTEST_CONTESTID_PROBLEM_PROBLEMID_RESULT: "/contests/:contestId/problems/:problemId/results",
+    SUBSCRIPTION_CHECKOUT: "/subscriptions/checkout",
+    SUBSCRIPTION_WEBHOOK: "/subscriptions/webhook",
+    SUBSCRIPTION_CURRENT: "/subscriptions/current",
+    SUBSCRIPTION_SUCCESS: "/subscriptions/success",
+    SUBSCRIPTION_SESSION: "/subscriptions/session",
   } as const;
   
   export const AdminRoutes = {
@@ -25,8 +34,6 @@ export const UserRoutes = {
     BLOCK_USER: "/users/:id/block",
     UNBLOCK_USER: "/users/:id/unblock",
     TOGGLE_BLOCK: "/block-user",
-  
-    // Problem 
     GET_ALL_PROBLEMS: "/problems",
     CREATE_PROBLEM: "/problems",
     GET_PROBLEM_BY_ID: "/problems/:id",
@@ -35,19 +42,16 @@ export const UserRoutes = {
     PROCESS_SPECIFIC_PROBLEM: "/problems/single",
     BLOCK_PROBLEM: "/problems/:id/block",
     UNBLOCK_PROBLEM: "/problems/:id/unblock",
+    CONTESTS: "/contests",
+    CONTESTS_CONTEST_ID: "/contests/:contestId",
   };
   
   export const ProblemRoutes = {
     GET_ALL_PROBLEMS: "/problems",
     GET_PROBLEM_BY_SLUG: "/problems/:slug",
     GET_SUBMISSIONS: "/submissions",
-  
-  
     EXECUTE_CODE: "/execute",
   } as const;
-  
-  
-  
   
   export type UserRouteKeys = keyof typeof UserRoutes;
   export type ProblemRouteKeys = keyof typeof ProblemRoutes;

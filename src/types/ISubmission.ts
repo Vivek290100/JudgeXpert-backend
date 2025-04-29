@@ -1,4 +1,3 @@
-// Backend\src\types\ISubmission.ts
 import { Types } from "mongoose";
 import { TestCaseResult } from "./ITestCaseResult";
 

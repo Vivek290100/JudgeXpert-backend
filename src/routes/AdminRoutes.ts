@@ -24,8 +24,8 @@ adminRouter
   .patch(AdminRoutes.UNBLOCK_PROBLEM, adminMiddleware, problemController.unblockProblem.bind(problemController));
 
 adminRouter
-  .get("/contests", adminMiddleware, contestController.getAdminContests.bind(contestController))
-  .post("/contests", adminMiddleware, contestController.createContest.bind(contestController))
-  .put("/contests/:contestId", adminMiddleware, contestController.updateContestStatus.bind(contestController));
+  .get(AdminRoutes.CONTESTS, adminMiddleware, contestController.getAdminContests.bind(contestController))
+  .post(AdminRoutes.CONTESTS, adminMiddleware, contestController.createContest.bind(contestController))
+  .put(AdminRoutes.CONTESTS_CONTEST_ID, adminMiddleware, contestController.updateContestStatus.bind(contestController));
 
 export default adminRouter;

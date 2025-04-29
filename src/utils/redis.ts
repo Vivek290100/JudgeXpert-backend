@@ -1,4 +1,3 @@
-// utils/redis.ts
 import { createClient, RedisClientType } from "redis";
 import { IRedisService } from "../interfaces/utilInterfaces/IRedisService";
 
@@ -32,7 +31,7 @@ class RedisService implements IRedisService {
       await this.client.set("test-key", "Redis is working!");
     } catch (error) {
       console.error("Redis Connection Failed:", error);
-      throw error; // Propagate error to be handled by the caller
+      throw error;
     }
   }
 
@@ -48,7 +47,6 @@ class RedisService implements IRedisService {
     await this.client.del(key);
   }
 
-  // Optional: Add a disconnect method if needed
   async disconnect(): Promise<void> {
     await this.client.disconnect();
     console.log("🌏 Redis Disconnected");

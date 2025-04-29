@@ -1,6 +1,6 @@
 export interface ILeaderboardUser {
     rank: number;
   username: string;
-  score: number; // Using problemsSolved as score
+  score: number;
   _id: string;
   }
