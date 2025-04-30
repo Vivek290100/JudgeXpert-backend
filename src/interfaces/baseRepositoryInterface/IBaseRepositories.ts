@@ -1,5 +1,5 @@
 //Backend\src\interfaces\baseRepositoryInterface\IBaseRepositories.ts
-import { UpdateQuery } from "mongoose";
+import { FilterQuery, UpdateQuery } from "mongoose";
 import { Document } from "mongoose";
 
 export interface IBaseRepository<T extends Document> {
@@ -8,4 +8,5 @@ export interface IBaseRepository<T extends Document> {
   findById(id: string): Promise<T | null>;
   update(id: string, data: UpdateQuery<T>): Promise<T | null>;
   delete(id: string): Promise<T | null>;
+  countDocuments(query: FilterQuery<T>): Promise<number>;
 }

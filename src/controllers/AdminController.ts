@@ -164,6 +164,20 @@ class AdminController {
       handleError(res, error);
     }
   }
+
+  async getDashboardStats(req: Request, res: Response): Promise<void> {
+    try {
+      const stats = await this.adminService.getDashboardStats();
+      sendResponse(res, {
+        success: true,
+        status: StatusCode.SUCCESS,
+        message: SuccessMessages.DASHBOARD_STATS_FETCHED,
+        data: stats,
+      });
+    } catch (error: any) {
+      handleError(res, error);
+    }
+  }
 }
 
 export default AdminController;

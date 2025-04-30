@@ -44,6 +44,7 @@ export const UserRoutes = {
     UNBLOCK_PROBLEM: "/problems/:id/unblock",
     CONTESTS: "/contests",
     CONTESTS_CONTEST_ID: "/contests/:contestId",
+    GET_DASHBOARD_STATS: "/dashboard-stats",
   };
   
   export const ProblemRoutes = {

@@ -1,3 +1,4 @@
+// Backend\src\utils\dependencies.ts
 import { Server } from "socket.io";
 import UserRepository from "../repositories/UserRepository";
 import RefreshTokenRepository from "../repositories/RefreshTokenRepository";
@@ -38,7 +39,6 @@ import SubscriptionService from "../services/SubscriptionService";
 import SubscriptionController from "../controllers/SubscriptionController";
 import { ISubscriptionRepository } from "../interfaces/repositoryInterfaces/ISubscriptionRepository";
 import SubscriptionRepository from "../repositories/SubscriptionRepository";
-
 
 interface DependenciesType {
   userRepository: IUserRepository;
@@ -81,24 +81,28 @@ const initializeDependencies = (io?: Server): DependenciesType => {
   const userService: IUserService = new UserService(userRepository, refreshTokenRepository, jwtService, emailService, redisService);
   const userController = new UserController(userService);
 
-  const adminService: IAdminService = new AdminService(userRepository);
+  // Declare repositories needed for adminService and problemController
+  const problemRepository: IProblemRepository = new ProblemRepository();
+  const contestRepository: IContestRepository = new ContestRepository();
+  const subscriptionRepository: ISubscriptionRepository = new SubscriptionRepository();
+  const subscriptionService: ISubscriptionService = new SubscriptionService(subscriptionRepository, userRepository);
+
+  // Instantiate adminService with all required repositories
+  const adminService: IAdminService = new AdminService(userRepository, problemRepository, contestRepository);
   const adminController = new AdminController(adminService);
 
-  const problemRepository: IProblemRepository = new ProblemRepository();
+  // Now instantiate problemService and problemController
   const problemService: IProblemService = new ProblemService(problemRepository);
-  
+  const problemController = new ProblemController(problemService, subscriptionService);
+
   const discussionRepository: IDiscussionRepository = new DiscussionRepository();
   const discussionService: IDiscussionService = new DiscussionService(discussionRepository, problemRepository);
   const discussionController = new DiscussionController(discussionService);
-  
-  const contestRepository: IContestRepository = new ContestRepository();
+
   const contestService: IContestService = new ContestService(contestRepository);
   const contestController = new ContestController(contestService);
-  
-  const subscriptionRepository: ISubscriptionRepository = new SubscriptionRepository();
-  const subscriptionService: ISubscriptionService = new SubscriptionService(subscriptionRepository, userRepository);
+
   const subscriptionController = new SubscriptionController(subscriptionService);
-  const problemController = new ProblemController(problemService, subscriptionService);
 
   const notificationService: INotificationService = new NotificationService(contestRepository, io!);
 

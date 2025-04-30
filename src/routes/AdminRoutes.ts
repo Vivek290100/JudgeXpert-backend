@@ -11,7 +11,8 @@ adminRouter
   .get(AdminRoutes.GET_USER_BY_ID, adminMiddleware, adminController.getUserById.bind(adminController))
   .post(AdminRoutes.BLOCK_USER, adminMiddleware, adminController.blockUser.bind(adminController))
   .post(AdminRoutes.UNBLOCK_USER, adminMiddleware, adminController.unblockUser.bind(adminController))
-  .post(AdminRoutes.TOGGLE_BLOCK, adminMiddleware, adminController.toggleBlockUser.bind(adminController));
+  .post(AdminRoutes.TOGGLE_BLOCK, adminMiddleware, adminController.toggleBlockUser.bind(adminController))
+  .get(AdminRoutes.GET_DASHBOARD_STATS, adminMiddleware, adminController.getDashboardStats.bind(adminController)); // New route
 
 adminRouter
   .get(AdminRoutes.GET_ALL_PROBLEMS, adminMiddleware, problemController.getProblems.bind(problemController))
