@@ -39,4 +39,8 @@ export default class SubscriptionRepository implements ISubscriptionRepository {
     const subscriptions = await Subscription.find().lean().exec();
     return subscriptions;
   }
+
+  async aggregate(pipeline: any[]): Promise<any[]> {
+    return await Subscription.aggregate(pipeline).exec();
+  }
 }

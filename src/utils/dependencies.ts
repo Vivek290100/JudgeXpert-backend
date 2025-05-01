@@ -88,7 +88,7 @@ const initializeDependencies = (io?: Server): DependenciesType => {
   const subscriptionService: ISubscriptionService = new SubscriptionService(subscriptionRepository, userRepository);
 
   // Instantiate adminService with all required repositories
-  const adminService: IAdminService = new AdminService(userRepository, problemRepository, contestRepository);
+  const adminService: IAdminService = new AdminService(userRepository, problemRepository, contestRepository, subscriptionRepository);
   const adminController = new AdminController(adminService);
 
   // Now instantiate problemService and problemController

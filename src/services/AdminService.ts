@@ -1,15 +1,17 @@
-import { DashboardStats, IAdminService } from "../interfaces/serviceInterfaces/IAdminService";
+import { DashboardStats, IAdminService, RevenueStats } from "../interfaces/serviceInterfaces/IAdminService";
 import { IUser } from "../types/IUser";
 import { IUserRepository } from "../interfaces/repositoryInterfaces/IUserRepository";
 import { NotFoundError, InternalServerError, ErrorMessages } from "../utils/errors";
 import { IProblemRepository } from "../interfaces/repositoryInterfaces/IProblemRepository";
 import { IContestRepository } from "../interfaces/repositoryInterfaces/IContestRepository";
+import { ISubscriptionRepository } from "../interfaces/repositoryInterfaces/ISubscriptionRepository";
 
 class AdminService implements IAdminService {
   constructor(
     private _userRepository: IUserRepository,
     private _problemRepository: IProblemRepository,
-    private _contestRepository: IContestRepository
+    private _contestRepository: IContestRepository,
+    private _subscriptionRepository: ISubscriptionRepository
   ) {}
 
   async getAllUsers(page: number = 1, limit: number = 10, search: string = ""): Promise<{ users: IUser[], total: number }> {
@@ -67,6 +69,49 @@ class AdminService implements IAdminService {
       };
     } catch (error) {
       throw new InternalServerError("Failed to fetch dashboard statistics");
+    }
+  }
+
+  async getRevenueStats(period: 'weekly' | 'monthly' | 'yearly'): Promise<RevenueStats[]> {
+    try {
+      const groupBy = period === 'yearly' ? { $year: "$createdAt" } :
+                      period === 'monthly' ? { $month: "$createdAt" } :
+                      { $week: "$createdAt" };
+      
+      const revenueData = await this._subscriptionRepository.aggregate([
+        {
+          $match: {
+            status: "active",
+            createdAt: { $exists: true }
+          }
+        },
+        {
+          $group: {
+            _id: groupBy,
+            revenue: { $sum: "$price" },
+            date: { $first: "$createdAt" }
+          }
+        },
+        {
+          $sort: { date: 1 }
+        },
+        {
+          $project: {
+            period: "$_id",
+            revenue: 1,
+            date: 1,
+            _id: 0
+          }
+        }
+      ]);
+
+      return revenueData.map(data => ({
+        period: data.period.toString(),
+        revenue: data.revenue,
+        date: new Date(data.date)
+      }));
+    } catch (error) {
+      throw new InternalServerError("Failed to fetch revenue statistics");
     }
   }
 }

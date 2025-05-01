@@ -20,6 +20,7 @@ const mockAdminService: IAdminService = {
   blockUser: jest.fn(),
   unblockUser: jest.fn(),
   toggleBlockStatus: jest.fn(),
+  getDashboardStats: jest.fn(),
 };
 
 // Create an instance of AdminController with the mock service
