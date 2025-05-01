@@ -164,6 +164,38 @@ class AdminController {
       handleError(res, error);
     }
   }
+
+  async getDashboardStats(req: Request, res: Response): Promise<void> {
+    try {
+      const stats = await this.adminService.getDashboardStats();
+      sendResponse(res, {
+        success: true,
+        status: StatusCode.SUCCESS,
+        message: SuccessMessages.DASHBOARD_STATS_FETCHED,
+        data: stats,
+      });
+    } catch (error: any) {
+      handleError(res, error);
+    }
+  }
+
+  async getRevenueStats(req: Request, res: Response): Promise<void> {
+    try {
+      const period = req.query.period as 'weekly' | 'monthly' | 'yearly' || 'yearly';
+      if (!['weekly', 'monthly', 'yearly'].includes(period)) {
+        throw new BadRequestError("Invalid period parameter");
+      }
+      const revenueStats = await this.adminService.getRevenueStats(period);
+      sendResponse(res, {
+        success: true,
+        status: StatusCode.SUCCESS,
+        message: SuccessMessages.REVENUE_STATS_FETCHED,
+        data: revenueStats,
+      });
+    } catch (error: any) {
+      handleError(res, error);
+    }
+  }
 }
 
 export default AdminController;

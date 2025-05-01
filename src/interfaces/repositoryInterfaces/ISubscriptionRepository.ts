@@ -6,4 +6,6 @@ export interface ISubscriptionRepository {
   findByStripeSubscriptionId(stripeSubscriptionId: string): Promise<ISubscription | null>;
   update(subscriptionId: string, update: Partial<ISubscription>): Promise<ISubscription | null>;
   findAll(): Promise<ISubscription[]>;
+  aggregate(pipeline: any[]): Promise<any[]>;
+
 }

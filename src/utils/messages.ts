@@ -21,6 +21,9 @@ export const SuccessMessages = {
   USER_FETCHED: "User fetched successfully",
   USER_BLOCKED: "User blocked successfully",
   USER_UNBLOCKED: "User unblocked successfully",
+  DASHBOARD_STATS_FETCHED: "Dashboard statistics fetched successfully",
+  REVENUE_STATS_FETCHED: "Revenue statistics fetched successfully",
+
   
   // Problem
   PROBLEM_CREATED: "Problem created successfully",

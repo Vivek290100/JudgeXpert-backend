@@ -28,6 +28,10 @@ class BaseRepository<T extends Document> implements IBaseRepository<T> {
   async delete(id: string): Promise<T | null> {
     return await this.model.findByIdAndDelete(id);
   }
+
+  async countDocuments(query: FilterQuery<T>): Promise<number> {
+    return this.model.countDocuments(query).exec();
+  }
   
 }
 
