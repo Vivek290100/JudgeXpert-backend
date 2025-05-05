@@ -2,10 +2,12 @@ import { Server } from "socket.io";
 import { IContestRepository } from "../interfaces/repositoryInterfaces/IContestRepository";
 import { INotificationService } from "../interfaces/serviceInterfaces/INotificationService";
 import { FilterQuery } from "mongoose";
+import User from "../models/UserModel";
 
 class NotificationService implements INotificationService {
   private pendingNotifications: Map<string, any[]> = new Map();
   private notifiedContests: Set<string> = new Set();
+  private notifiedProblems: Set<string> = new Set();
 
   constructor(
     private contestRepository: IContestRepository,
@@ -27,13 +29,14 @@ class NotificationService implements INotificationService {
   async notifyContestStart(contestId: string, participants: string[]): Promise<void> {
     const contest = await this.contestRepository.findById(contestId);
     if (!contest) {
+      console.log("Contest not found:", contestId);
       return;
     }
 
     if (this.notifiedContests.has(contestId)) {
+      console.log("Contest already notified:", contestId);
       return;
     }
-
 
     const notification = {
       type: "contestStarted",
@@ -46,8 +49,10 @@ class NotificationService implements INotificationService {
     participants.forEach((userId) => {
       const socketId = this.io.sockets.adapter.rooms.get(userId)?.values().next().value;
       if (socketId) {
+        console.log(`Sending contestStarted to user ${userId} via socket ${socketId}`);
         this.io.to(socketId).emit("contestStarted", notification);
       } else {
+        console.log(`User ${userId} offline, queuing contestStarted notification`);
         const userNotifications = this.pendingNotifications.get(userId) || [];
         if (!userNotifications.some((n) => n.contestId === contestId)) {
           userNotifications.push(notification);
@@ -76,16 +81,56 @@ class NotificationService implements INotificationService {
     }
   }
 
+  async notifyNewProblem(slug: string): Promise<void> {
+    if (this.notifiedProblems.has(slug)) {
+      // console.log("Problem already notified:", slug);
+      return;
+    }
+
+    const admins = await User.find({ role: "admin" }).select("_id");
+    if (!admins.length) {
+      console.log("No admins found to notify for new problem:", slug);
+      return;
+    }
+
+    const notification = {
+      type: "newProblem",
+      slug,
+      message: `New problem folder detected: ${slug}`,
+      timestamp: new Date().toISOString(),
+    };
+
+    admins.forEach((admin) => {
+      const userId = admin._id.toString();
+      const socketId = this.io.sockets.adapter.rooms.get(userId)?.values().next().value;
+      if (socketId) {
+        // console.log(`Sending newProblem to admin ${userId} via socket ${socketId}`);
+        this.io.to(socketId).emit("newProblem", notification);
+      } else {
+        console.log(`Admin ${userId} offline, queuing newProblem notification`);
+        const userNotifications = this.pendingNotifications.get(userId) || [];
+        if (!userNotifications.some((n) => n.slug === slug)) {
+          userNotifications.push(notification);
+          this.pendingNotifications.set(userId, userNotifications);
+        }
+      }
+    });
+
+    this.notifiedProblems.add(slug);
+  }
+
   async sendPendingNotifications(userId: string): Promise<void> {
     const notifications = this.pendingNotifications.get(userId) || [];
     if (notifications.length === 0) {
+      console.log(`No pending notifications for user ${userId}`);
       return;
     }
 
     const socketId = this.io.sockets.adapter.rooms.get(userId)?.values().next().value;
     if (socketId) {
+      console.log(`Sending ${notifications.length} pending notifications to user ${userId}`);
       notifications.forEach((notification) => {
-        this.io.to(socketId).emit("contestStarted", notification);
+        this.io.to(socketId).emit(notification.type, notification);
       });
       this.pendingNotifications.delete(userId);
     }

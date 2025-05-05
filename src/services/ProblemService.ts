@@ -262,7 +262,7 @@ class ProblemService implements IProblemService {
       throw new NotFoundError(ErrorMessages.FAILED_TO_PROCESS_PROBLEM);
     }
 
-    console.log("Final problem:", updatedProblem);
+    // console.log("Final problem:", updatedProblem);
     return updatedProblem;
   }
 
