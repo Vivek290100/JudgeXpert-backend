@@ -43,12 +43,12 @@ jobs:
           ssh -o StrictHostKeyChecking=no -i judgexpertpem.pem ${{ secrets.EC2_ACCESS_SSH_COMMAND }} <<EOF
             echo "${{ secrets.APPLICATION_ENV }}" | sudo tee .env > /dev/null
 
-            docker stop judgexpert-container || true
-            docker rm judgexpert-container || true
+            sudo docker stop judgexpert-container || true
+            sudo docker rm judgexpert-container || true
 
-            docker pull ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
 
-            docker run -d \
+            sudo docker run -d \
               --name judgexpert-container \
               --env-file .env \
               -p 3000:3000 \
