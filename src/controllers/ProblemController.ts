@@ -298,6 +298,17 @@ class ProblemController {
         throw new NotFoundError(ErrorMessages.FAILED_TO_PROCESS_PROBLEM);
       }
 
+      // Delete the problem folder after successful processing
+      const basePath = process.env.PROBLEM_BASE_PATH || path.join(__dirname, "../problems");
+      const fullProblemDir = path.join(basePath, problemDir);
+      try {
+        await fs.rm(fullProblemDir, { recursive: true, force: true });
+        console.log(`Successfully deleted problem folder: ${fullProblemDir}`);
+      } catch (deleteError: any) {
+        console.error(`Failed to delete problem folder ${fullProblemDir}:`, deleteError.message);
+        // Continue with success response, as folder deletion is secondary
+      }
+
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,

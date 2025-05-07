@@ -18,8 +18,12 @@ cron.schedule("*/10 * * * * *", async () => {
   try {
     await Dependencies.notificationService!.checkAndNotifyStartingContests();
     await Dependencies.subscriptionService!.checkAndUpdateExpiredSubscriptions();
+    const newProblemFolders = await Dependencies.problemFolderService!.checkForNewProblemFolders();
+    for (const slug of newProblemFolders) {
+      await Dependencies.notificationService!.notifyNewProblem(slug);
+    }
   } catch (error) {
-    console.error("Error checking starting contests:", error);
+    console.error("Cron job error:", error);
   }
 });
 

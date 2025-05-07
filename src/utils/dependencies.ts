@@ -39,6 +39,8 @@ import SubscriptionService from "../services/SubscriptionService";
 import SubscriptionController from "../controllers/SubscriptionController";
 import { ISubscriptionRepository } from "../interfaces/repositoryInterfaces/ISubscriptionRepository";
 import SubscriptionRepository from "../repositories/SubscriptionRepository";
+import { ProblemFolderService } from "../services/ProblemFolderService";
+
 
 interface DependenciesType {
   userRepository: IUserRepository;
@@ -63,6 +65,7 @@ interface DependenciesType {
   subscriptionService: ISubscriptionService;
   subscriptionController: SubscriptionController;
   notificationService?: INotificationService;
+  problemFolderService?: ProblemFolderService;
   io?: Server;
 }
 
@@ -106,6 +109,8 @@ const initializeDependencies = (io?: Server): DependenciesType => {
 
   const notificationService: INotificationService = new NotificationService(contestRepository, io!);
 
+  const problemFolderService: ProblemFolderService = new ProblemFolderService(problemRepository);
+  
   return {
     userRepository,
     refreshTokenRepository,
@@ -129,6 +134,7 @@ const initializeDependencies = (io?: Server): DependenciesType => {
     subscriptionService,
     subscriptionController,
     notificationService,
+    problemFolderService,
     io,
   };
 };
