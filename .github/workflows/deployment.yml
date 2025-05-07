@@ -1,0 +1,67 @@
+name: Build and Deploy Judgexpert
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  IMAGE_NAME: judgexpert-app
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Docker Buildx (for multi-stage builds if needed)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Login to Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Build Docker image
+      - name: Build Docker Image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest .
+
+      # Push Docker image
+      - name: Push Docker Image
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+
+      # Save EC2 PEM file
+      - name: Create PEM file
+        run: |
+          echo "${{ secrets.EC2_ACCESS_PEM }}" > judgexpertpem.pem
+          chmod 400 judgexpertpem.pem
+
+      # Deploy to EC2
+      - name: SSH and Deploy
+        run: |
+          ssh -o StrictHostKeyChecking=no -i judgexpertpem.pem ${{ secrets.EC2_ACCESS_SSH_COMMAND }} << 'EOF'
+            # Create .env file
+            echo "${{ secrets.APPLICATION_ENV }}" | sudo tee .env > /dev/null
+
+            # Stop and remove existing container (optional)
+            docker stop judgexpert-container || true
+            docker rm judgexpert-container || true
+
+            # Pull the latest image
+            docker pull ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+
+            # Run the container with .env
+            docker run -d \
+              --name judgexpert-container \
+              --env-file .env \
+              -p 3000:3000 \
+              ${{ secrets.DOCKER_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+          EOF
