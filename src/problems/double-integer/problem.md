@@ -1,0 +1,1 @@
+Given an integer `num`, return the integer doubled.
