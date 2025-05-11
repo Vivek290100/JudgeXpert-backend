@@ -22,7 +22,7 @@ class JWTService implements IJWTService {
     }
     try {
       return jwt.verify(token, secret) as { userId: string };
-    } catch (error) {
+    } catch (error:any) {
       throw new Error("Token verification failed");
     }
   }

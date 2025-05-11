@@ -67,7 +67,7 @@ class AdminService implements IAdminService {
         totalProblems,
         totalContests,
       };
-    } catch (error) {
+    } catch (error:any) {
       throw new InternalServerError("Failed to fetch dashboard statistics");
     }
   }
@@ -110,7 +110,7 @@ class AdminService implements IAdminService {
         revenue: data.revenue,
         date: new Date(data.date)
       }));
-    } catch (error) {
+    } catch (error:any) {
       throw new InternalServerError("Failed to fetch revenue statistics");
     }
   }

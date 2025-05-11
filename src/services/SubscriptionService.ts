@@ -36,7 +36,7 @@ export default class SubscriptionService implements ISubscriptionService {
     }
 
     const priceId = planId === "monthly" ? CONFIG.STRIPE_MONTHLY_PRICE_ID : CONFIG.STRIPE_YEARLY_PRICE_ID;
-    const price = planId === "monthly" ? 299 : 2499; // Price in rupees
+    // const price = planId === "monthly" ? 299 : 2499; // Price in rupees
 
     if (!priceId) {
       throw new Error(`Price ID for ${planId} plan is not configured`);
@@ -167,7 +167,7 @@ export default class SubscriptionService implements ISubscriptionService {
   }
 
   private async handleSubscriptionEvent(eventType: string, subscription: CustomStripeSubscription): Promise<void> {
-    const stripeSubscriptionId = subscription.id;
+    // const stripeSubscriptionId = subscription.id;
     const userId = subscription.metadata?.userId;
 
     if (!userId || !Types.ObjectId.isValid(userId)) {

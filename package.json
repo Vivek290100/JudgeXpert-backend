@@ -9,8 +9,7 @@
     "start": "node dist/server.js",
     "build": "tsc && cpy \"src/problems/**/*\" dist/problems",
     "test": "jest",
-    "lint": "eslint src --ext .ts",
-    "lint:deploy": "eslint src --ext .ts --max-warnings=0 || true"
+    "lint": "eslint src --ext .ts"
   },
   "author": "Vivek",
   "license": "ISC",

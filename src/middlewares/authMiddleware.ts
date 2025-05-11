@@ -20,7 +20,7 @@ const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction): vo
       ignoreExpiration: true
     }) as { userId: string };    req.user = { userId: decoded.userId };
     next();
-  } catch (error) {
+  } catch (_error) {
     res.status(401).json({ success: false, message: "Unauthorized: Token expired or invalid" });
     return;
   }

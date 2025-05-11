@@ -14,9 +14,8 @@ import { TestCaseResult } from "../types/ITestCaseResult";
 import { BadRequestError, ErrorMessages, NotFoundError } from "../utils/errors";
 import Submission from "../models/SubmissionModel";
 import User from "../models/UserModel";
-import { ISubmission, PopulatedContest, PopulatedUser } from "../types/ISubmission";
+import { ISubmission, PopulatedContest } from "../types/ISubmission";
 import Contest from "../models/ContestModel";
-import { log } from "console";
 
 class ProblemService implements IProblemService {
   constructor(private _problemRepository: IProblemRepository) {}

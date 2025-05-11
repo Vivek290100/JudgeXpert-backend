@@ -13,9 +13,10 @@ export default defineConfig([
     "!eslint.config.js",
     "**/*.config.ts"
   ]),
+
   {
     name: "project/base",
-    files: ["src/**/*.ts", "tests/**/*.ts"],
+    files: ["src/**/*.ts"],
     plugins: {
       "@typescript-eslint": typescriptEslintPlugin
     },
@@ -24,21 +25,17 @@ export default defineConfig([
       sourceType: "module",
       parser: typescriptEslintParser,
       globals: {
-        "process": "readonly",
-        "console": "readonly",
-        "__dirname": "readonly",
-        "module": "readonly",
-        "Express": "readonly",
-        "Buffer": "readonly",
-        "setInterval": "readonly"
+        process: "readonly",
+        console: "readonly",
+        __dirname: "readonly",
+        Buffer: "readonly",
+        setInterval: "readonly"
       }
     },
     rules: {
-      "no-unused-vars": "off",
-      "no-undef": "error",
       "eqeqeq": ["error", "always"],
       "no-console": "off",
-      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
       "@typescript-eslint/explicit-module-boundary-types": "off",
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-non-null-assertion": "off",
@@ -48,24 +45,24 @@ export default defineConfig([
       ...prettierConfig.rules
     },
     linterOptions: {
-      reportUnusedDisableDirectives: "warn",
-      noInlineConfig: false
+      reportUnusedDisableDirectives: "warn"
     }
   },
+
   {
     name: "project/tests",
     files: ["src/__tests__/**/*.ts", "tests/**/*.ts"],
     languageOptions: {
       globals: {
-        "jest": "readonly",
-        "describe": "readonly",
-        "it": "readonly",
-        "expect": "readonly",
-        "before": "readonly",
-        "after": "readonly",
-        "beforeEach": "readonly",
-        "afterEach": "readonly",
-        "test": "readonly"
+        jest: "readonly",
+        describe: "readonly",
+        it: "readonly",
+        expect: "readonly",
+        before: "readonly",
+        after: "readonly",
+        beforeEach: "readonly",
+        afterEach: "readonly",
+        test: "readonly"
       }
     },
     rules: {

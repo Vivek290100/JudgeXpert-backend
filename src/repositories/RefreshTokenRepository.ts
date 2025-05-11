@@ -21,7 +21,7 @@ class RefreshTokenRepository implements IRefreshTokenRepository {
     return await this.redisService.get(this.getUserKey(userId));
   }
 
-  async findByToken(token: string): Promise<string | null> {
+  async findByToken(): Promise<string | null> {
 
     throw new Error("findByToken not implemented in this flow");
   }
@@ -35,7 +35,7 @@ class RefreshTokenRepository implements IRefreshTokenRepository {
     await this.redisService.del(this.getUserKey(userId));
   }
 
-  async deleteByToken(token: string): Promise<void> {
+  async deleteByToken(): Promise<void> {
     throw new Error("deleteByToken not implemented in this flow");
   }
 }

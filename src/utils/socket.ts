@@ -32,11 +32,11 @@ export const initializeSocket = (server: http.Server) => {
       userSocketMap[userId] = socket.id;
       socket.join(userId);
       io.emit("getOnlineUsers", Object.keys(userSocketMap));
-      Dependencies.notificationService?.sendPendingNotifications(userId).catch((error) => {
+      Dependencies.notificationService?.sendPendingNotifications(userId).catch(() => {
       });
     }
 
-    socket.on("disconnect", (reason) => {
+    socket.on("disconnect", () => {
       if (userId && userId in userSocketMap) {
         delete userSocketMap[userId];
         socket.leave(userId);
