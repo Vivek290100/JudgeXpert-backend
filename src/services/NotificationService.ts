@@ -65,21 +65,25 @@ class NotificationService implements INotificationService {
   }
 
   async checkAndNotifyStartingContests(): Promise<void> {
-    const now = new Date();
-    const thirtySecondsAgo = new Date(now.getTime() - 30 * 1000);
+  const now = new Date();
+  const thirtySecondsAgo = new Date(now.getTime() - 30 * 1000);
 
-    const query: FilterQuery<any> = {
-      startTime: { $gte: thirtySecondsAgo, $lte: now },
-      isBlocked: false,
-    };
+  const query: FilterQuery<any> = {
+    startTime: { $gte: thirtySecondsAgo, $lte: now },
+    isBlocked: false,
+  };
 
-    const { contests } = await this.contestRepository.findPaginated(1, 1000, query);
+  const { contests } = await this.contestRepository.findPaginated(1, 1000, query);
 
-    for (const contest of contests) {
-      const participantIds = contest.participants.map((p: any) => p._id.toString());
-      await this.notifyContestStart(contest._id, participantIds);
+  for (const contest of contests) {
+    if (this.notifiedContests.has(contest._id)) {
+      console.log(`Skipping already notified contest: ${contest._id}`);
+      continue;
     }
+    const participantIds = contest.participants.map((p: any) => p._id.toString());
+    await this.notifyContestStart(contest._id, participantIds);
   }
+}
 
   async notifyNewProblem(slug: string): Promise<void> {
     if (this.notifiedProblems.has(slug)) {
