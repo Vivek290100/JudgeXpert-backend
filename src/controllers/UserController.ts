@@ -72,7 +72,7 @@ class UserController {
     try {
       const { email, password } = req.body;
       const result = await this._userService.loginUser(email, password);
-      const { user, accessToken, refreshToken } = result;
+      const { user, accessToken } = result;
 
       setAuthCookie(res, accessToken);
       const filteredUser = filterUserResponse(user);

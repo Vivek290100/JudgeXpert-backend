@@ -508,7 +508,7 @@ class ProblemController {
         throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
       }
 
-      const { problemSlug, contestId } = req.query;
+      const { problemSlug } = req.query;
       let slug: string | undefined;
 
       if (problemSlug !== undefined) {

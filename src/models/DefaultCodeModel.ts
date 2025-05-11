@@ -1,6 +1,5 @@
 import { model, Schema } from "mongoose";
 import { IDefaultCode } from "../types/IDefaultCode";
-import { SUPPORTED_LANGUAGES } from "../utils/languages";
 
 const defaultCodeSchema = new Schema<IDefaultCode>(
   {

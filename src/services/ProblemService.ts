@@ -394,7 +394,7 @@ class ProblemService implements IProblemService {
 
     const results: TestCaseResult[] = [];
     let totalExecutionTime = 0;
-    let maxMemoryUsed = 0;
+    const maxMemoryUsed = 0;
 
     for (const testCase of testCasesToRun) {
       try {
