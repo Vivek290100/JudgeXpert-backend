@@ -4,6 +4,7 @@ import { sendResponse, handleError } from "../utils/responseUtils";
 import { StatusCode } from "../utils/statusCode";
 import { SuccessMessages } from "../utils/messages";
 import { BadRequestError, ErrorMessages } from "../utils/errors";
+import moment from "moment-timezone";
 
 interface AuthRequest extends Request {
   user?: { userId: string, userName: string },
@@ -102,7 +103,24 @@ class ContestController {
   async createContest(req: Request, res: Response): Promise<void> {
     try {
       const { title, description, startTime, endTime, problems } = req.body;
-      const contestData = { title, description, startTime, endTime, problems };
+      console.log("backend", startTime, endTime);
+
+      // Parse startTime and endTime as IST and convert to UTC
+      const parsedStartTime = moment.tz(startTime, "YYYY-MM-DDTHH:mm", "Asia/Kolkata").toDate();
+      const parsedEndTime = moment.tz(endTime, "YYYY-MM-DDTHH:mm", "Asia/Kolkata").toDate();
+
+      // Validate dates
+      if (isNaN(parsedStartTime.getTime()) || isNaN(parsedEndTime.getTime())) {
+        throw new BadRequestError("Invalid date format");
+      }
+
+      const contestData = {
+        title,
+        description,
+        startTime: parsedStartTime,
+        endTime: parsedEndTime,
+        problems,
+      };
       const newContest = await this.contestService.createContest(contestData);
       sendResponse(res, {
         success: true,

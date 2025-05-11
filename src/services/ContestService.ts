@@ -1,3 +1,4 @@
+import moment from "moment-timezone";
 import { IContestRepository } from "../interfaces/repositoryInterfaces/IContestRepository";
 import { IContestService } from "../interfaces/serviceInterfaces/IContestService";
 import { BadRequestError, ErrorMessages } from "../utils/errors";
@@ -7,13 +8,32 @@ class ContestService implements IContestService {
   constructor(private contestRepository: IContestRepository) {}
 
   async createContest(data: any): Promise<any> {
-    if (new Date(data.startTime) >= new Date(data.endTime)) {
+    console.log("service", data);
+
+    // Validate that startTime and endTime are valid Date objects
+    const startTime = new Date(data.startTime);
+    const endTime = new Date(data.endTime);
+
+    if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
+      throw new BadRequestError("Invalid date format");
+    }
+
+    if (startTime >= endTime) {
       throw new BadRequestError("Start time must be before end time");
     }
-    return this.contestRepository.create(data);
+
+    return this.contestRepository.create({
+      ...data,
+      startTime,
+      endTime,
+    });
   }
 
-  async getContests(page: number, limit: number, query: FilterQuery<any> = {}): Promise<{
+  async getContests(
+    page: number,
+    limit: number,
+    query: FilterQuery<any> = {}
+  ): Promise<{
     contests: any[];
     totalPages: number;
     currentPage: number;
@@ -27,13 +47,26 @@ class ContestService implements IContestService {
     const now = new Date();
 
     const [activeCount, upcomingCount, endedCount] = await Promise.all([
-      this.contestRepository.countDocuments({ ...userQuery, startTime: { $lte: now }, endTime: { $gte: now } }),
+      this.contestRepository.countDocuments({
+        ...userQuery,
+        startTime: { $lte: now },
+        endTime: { $gte: now },
+      }),
       this.contestRepository.countDocuments({ ...userQuery, startTime: { $gt: now } }),
       this.contestRepository.countDocuments({ ...userQuery, endTime: { $lt: now } }),
     ]);
 
+    // Convert dates to IST for each contest
+    const formattedContests = contests.map((contest) => ({
+      ...contest,
+      startTime: moment(contest.startTime).tz("Asia/Kolkata").format("YYYY-MM-DDTHH:mm:ss"),
+      endTime: moment(contest.endTime).tz("Asia/Kolkata").format("YYYY-MM-DDTHH:mm:ss"),
+      createdAt: moment(contest.createdAt).tz("Asia/Kolkata").format("YYYY-MM-DDTHH:mm:ss"),
+      updatedAt: moment(contest.updatedAt).tz("Asia/Kolkata").format("YYYY-MM-DDTHH:mm:ss"),
+    }));
+
     return {
-      contests,
+      contests: formattedContests,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
       totalContests: total,
@@ -49,11 +82,15 @@ class ContestService implements IContestService {
       throw new BadRequestError(ErrorMessages.CONTEST_NOT_FOUND);
     }
 
-    // Fetch latest submissions for each participant per problem
     const latestSubmissions = await this.getLatestSubmissionsForContest(contestId, contest.problems);
 
+    // Convert dates to desired timezone (e.g., IST)
     return {
       ...contest,
+      startTime: moment(contest.startTime).tz("Asia/Kolkata").format("YYYY-MM-DDTHH:mm:ss"),
+      endTime: moment(contest.endTime).tz("Asia/Kolkata").format("YYYY-MM-DDTHH:mm:ss"),
+      createdAt: moment(contest.createdAt).tz("Asia/Kolkata").format("YYYY-MM-DDTHH:mm:ss"),
+      updatedAt: moment(contest.updatedAt).tz("Asia/Kolkata").format("YYYY-MM-DDTHH:mm:ss"),
       latestSubmissions,
     };
   }
@@ -78,7 +115,13 @@ class ContestService implements IContestService {
       { new: true }
     );
     if (!contest) throw new BadRequestError(ErrorMessages.CONTEST_NOT_FOUND);
-    return contest;
+    return {
+      ...contest,
+      startTime: moment(contest.startTime).tz("Asia/Kolkata").format("YYYY-MM-DDTHH:mm:ss"),
+      endTime: moment(contest.endTime).tz("Asia/Kolkata").format("YYYY-MM-DDTHH:mm:ss"),
+      createdAt: moment(contest.createdAt).tz("Asia/Kolkata").format("YYYY-MM-DDTHH:mm:ss"),
+      updatedAt: moment(contest.updatedAt).tz("Asia/Kolkata").format("YYYY-MM-DDTHH:mm:ss"),
+    };
   }
 
   async getRegisteredContests(userId: string): Promise<string[]> {
@@ -94,23 +137,25 @@ class ContestService implements IContestService {
     if (!contest) {
       throw new BadRequestError(ErrorMessages.CONTEST_NOT_FOUND);
     }
-    
+
     const problemExists = contest.problems.some((p: any) => p._id.toString() === problemId);
     if (!problemExists) {
       throw new BadRequestError("Problem not found in this contest");
     }
-    
+
     const submissions = await this.contestRepository.findLatestSubmissions(
       problemId,
       contestId,
       contest.participants.map((p: any) => p._id.toString())
     );
-    
+
     return submissions.map((submission: any) => ({
       userId: submission.userId._id,
       userName: submission.userId.userName,
       executionTime: submission.latestSubmission.executionTime,
-      submittedAt: submission.latestSubmission.submittedAt,
+      submittedAt: moment(submission.latestSubmission.submittedAt)
+        .tz("Asia/Kolkata")
+        .format("YYYY-MM-DDTHH:mm:ss"),
     }));
   }
 
@@ -126,7 +171,9 @@ class ContestService implements IContestService {
         userId: submission.userId._id,
         userName: submission.userId.userName,
         executionTime: submission.latestSubmission.executionTime,
-        submittedAt: submission.latestSubmission.submittedAt,
+        submittedAt: moment(submission.latestSubmission.submittedAt)
+          .tz("Asia/Kolkata")
+          .format("YYYY-MM-DDTHH:mm:ss"),
       }));
     }
 

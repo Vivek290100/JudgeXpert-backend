@@ -9,9 +9,10 @@ const contestSchema = new Schema({
   participants: [{ type: Schema.Types.ObjectId, ref: "User" }],
   isActive: { type: Boolean, default: true },
   winner: { type: Schema.Types.ObjectId, ref: "User", default: null },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now },
+  // createdAt: { type: Date, default: Date.now },
+  // updatedAt: { type: Date, default: Date.now },
   isBlocked: { type: Boolean, default: false }, // Added default value
-});
+},{ timestamps: true }
+);
 
 export default model("Contest", contestSchema);

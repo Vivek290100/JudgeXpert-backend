@@ -45,7 +45,7 @@ class ContestRepository extends BaseRepository<any> implements IContestRepositor
 
   async findByIdAndUpdate(contestId: string, update: Partial<any>, options: { new: boolean } = { new: true }): Promise<any> {
     return this.model
-      .findByIdAndUpdate(contestId, update, options)
+      .findByIdAndUpdate(contestId, { ...update, updatedAt: new Date() }, options)
       .populate("problems", "_id title difficulty slug")
       .populate("participants", "_id userName")
       .lean()
@@ -62,6 +62,8 @@ class ContestRepository extends BaseRepository<any> implements IContestRepositor
   }
 
   async create(data: any): Promise<any> {
+    console.log("repository",data);
+    
     return this.model.create(data);
   }
 
