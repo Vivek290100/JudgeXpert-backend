@@ -44,6 +44,8 @@ const adminMiddleware = async (req: AuthRequest, res: Response, next: NextFuncti
     req.user = { userId: decoded.userId, role: user.role };
     next();
   } catch (_error) {
+    const error = _error as Error;
+    console.error("Admin middleware error:", error.message);
     sendResponse(res, {
       success: false,
       message: "Unauthorized: Token expired or invalid",

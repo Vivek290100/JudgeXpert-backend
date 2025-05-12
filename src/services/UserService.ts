@@ -34,7 +34,6 @@ class UserService implements IUserService {
       to: email,
       subject: purpose === "signup" ? "Verify your email" : "Reset your password",
       otp,
-      error: "",
     });
     return otp;
   }
@@ -116,6 +115,8 @@ class UserService implements IUserService {
     try {
       this._jwtService.verifyToken(storedToken, "refresh");
     } catch (error) {
+      console.log(error);
+      
       await this._refreshTokenRepository.deleteByUserId(userId);
       throw new UnauthorizedError(ErrorMessages.INVALID_REFRESH_TOKEN);
     }

@@ -21,6 +21,8 @@ const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction): vo
     }) as { userId: string };    req.user = { userId: decoded.userId };
     next();
   } catch (_error) {
+    const error = _error as Error;
+      console.error("Auth middleware error:", error.message);
     res.status(401).json({ success: false, message: "Unauthorized: Token expired or invalid" });
     return;
   }

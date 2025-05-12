@@ -22,7 +22,9 @@ class JWTService implements IJWTService {
     }
     try {
       return jwt.verify(token, secret) as { userId: string };
-    } catch (error:any) {
+    } catch (_error) {
+      const error = _error as Error;
+      console.error("Admin service error:", error.message);
       throw new Error("Token verification failed");
     }
   }

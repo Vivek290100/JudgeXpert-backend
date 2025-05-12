@@ -41,8 +41,8 @@ class ProblemService implements IProblemService {
         fs.access(outputsDir),
         fs.access(boilerplateDir),
       ]);
-    } catch (error) {
-      console.error("Directory structure validation failed:", error);
+    } catch (_error) {
+      console.error("Directory structure validation failed:", _error);
       throw new BadRequestError(ErrorMessages.INVALID_PROBLEM_DIR_STRUCTURE(problemDir));
     }
 
@@ -187,8 +187,8 @@ class ProblemService implements IProblemService {
       if (!problem?._id) {
         throw new NotFoundError(ErrorMessages.FAILED_TO_PROCESS_PROBLEM);
       }
-    } catch (error) {
-      throw new BadRequestError("Failed to save problem to database");
+    } catch (_error) {
+      throw new BadRequestError("Failed to save problem to database",_error);
     }
 
     // Save test cases

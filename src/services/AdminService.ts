@@ -12,7 +12,7 @@ class AdminService implements IAdminService {
     private _problemRepository: IProblemRepository,
     private _contestRepository: IContestRepository,
     private _subscriptionRepository: ISubscriptionRepository
-  ) {}
+  ) { }
 
   async getAllUsers(page: number = 1, limit: number = 10, search: string = ""): Promise<{ users: IUser[], total: number }> {
     const query = {
@@ -60,14 +60,16 @@ class AdminService implements IAdminService {
         this._problemRepository.countDocuments({}),
         this._contestRepository.countDocuments({}),
       ]);
-  
+
       return {
         totalUsers,
         subscribers,
         totalProblems,
         totalContests,
       };
-    } catch (error:any) {
+    } catch (_error) {
+      const error = _error as Error;
+      console.error("Admin service error:", error.message);
       throw new InternalServerError("Failed to fetch dashboard statistics");
     }
   }
@@ -75,9 +77,9 @@ class AdminService implements IAdminService {
   async getRevenueStats(period: 'weekly' | 'monthly' | 'yearly'): Promise<RevenueStats[]> {
     try {
       const groupBy = period === 'yearly' ? { $year: "$createdAt" } :
-                      period === 'monthly' ? { $month: "$createdAt" } :
-                      { $week: "$createdAt" };
-      
+        period === 'monthly' ? { $month: "$createdAt" } :
+          { $week: "$createdAt" };
+
       const revenueData = await this._subscriptionRepository.aggregate([
         {
           $match: {
@@ -110,7 +112,9 @@ class AdminService implements IAdminService {
         revenue: data.revenue,
         date: new Date(data.date)
       }));
-    } catch (error:any) {
+    } catch (_error) {
+      const error = _error as Error;
+      console.error("Admin service error:", error.message);
       throw new InternalServerError("Failed to fetch revenue statistics");
     }
   }

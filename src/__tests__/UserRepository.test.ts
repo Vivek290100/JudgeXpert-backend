@@ -1,6 +1,5 @@
 // src/__tests__/UserRepository.test.ts
 import UserRepository from '../../src/repositories/UserRepository';
-import { IUser } from '../../src/types/IUser';
 
 // Mock the User model to prevent Mongoose from creating a real model
 jest.mock('../../src/models/UserModel', () => ({
