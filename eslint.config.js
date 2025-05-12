@@ -1,10 +1,11 @@
-import { defineConfig, globalIgnores } from "eslint/config";
-import js from "@eslint/js";
-import typescriptEslintPlugin from "@typescript-eslint/eslint-plugin";
-import typescriptEslintParser from "@typescript-eslint/parser";
-import prettierConfig from "eslint-config-prettier";
+const typescriptEslintPlugin = require("@typescript-eslint/eslint-plugin");
+const typescriptEslintParser = require("@typescript-eslint/parser");
+const prettierConfig = require("eslint-config-prettier");
 
-export default defineConfig([
+const defineConfig = (config) => config;
+const globalIgnores = (patterns) => ({ ignores: patterns });
+
+module.exports = defineConfig([
   globalIgnores([
     "node_modules/**",
     "dist/**",
@@ -22,7 +23,7 @@ export default defineConfig([
     },
     languageOptions: {
       ecmaVersion: "latest",
-      sourceType: "module",
+      sourceType: "module", // For TypeScript ESM parsing
       parser: typescriptEslintParser,
       globals: {
         process: "readonly",
