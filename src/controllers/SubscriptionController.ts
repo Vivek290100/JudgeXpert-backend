@@ -42,6 +42,8 @@ export default class SubscriptionController {
 
     try {
       const { checkoutUrl } = await this.subscriptionService.createCheckoutSession(userId, planId);
+      console.log("checkoutUrl",checkoutUrl);
+      
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
@@ -59,6 +61,8 @@ export default class SubscriptionController {
 
   async handleWebhook(req: Request, res: Response): Promise<void> {
     const signature = req.headers["stripe-signature"] as string;
+    console.log("signature",signature);
+    
     const payload = req.body;
 
     try {
@@ -95,6 +99,8 @@ export default class SubscriptionController {
 
     try {
       const subscription = await this.subscriptionService.findByUserId(userId);
+      console.log("subscription111",subscription);
+      
 
       if (!subscription) {
         sendResponse(res, {
@@ -128,6 +134,8 @@ export default class SubscriptionController {
 
   async getCheckoutSession(req: AuthRequest, res: Response): Promise<void> {
     const sessionId = req.query.session_id as string;
+    console.log("sessionId",sessionId);
+    
     const userId = req.user?.userId;
 
     if (!sessionId || !userId || !Types.ObjectId.isValid(userId)) {
@@ -141,6 +149,8 @@ export default class SubscriptionController {
 
     try {
       const session = await stripe.checkout.sessions.retrieve(sessionId);
+          console.log("session",session);
+
 
       const sessionUserId = session.metadata?.userId;
       if (!sessionUserId || sessionUserId !== userId) {
@@ -191,6 +201,8 @@ export default class SubscriptionController {
 
   async handleSuccess(req: AuthRequest, res: Response): Promise<void> {
     const sessionId = req.query.session_id as string;
+    console.log("sessionIdsessionId",sessionId);
+    
     const userId = req.user?.userId;
 
     if (!sessionId || !userId || !Types.ObjectId.isValid(userId)) {
@@ -204,6 +216,8 @@ export default class SubscriptionController {
 
     try {
       const session = await stripe.checkout.sessions.retrieve(sessionId);
+      console.log("sessionsession",session);
+      
       if (session.metadata?.userId !== userId) {
         sendResponse(res, {
           success: false,
@@ -223,6 +237,8 @@ export default class SubscriptionController {
       }
 
       const subscription = await this.subscriptionService.findByUserId(userId);
+      console.log("subscription0",subscription);
+      
       if (!subscription || subscription.status !== "active") {
         sendResponse(res, {
           success: false,
