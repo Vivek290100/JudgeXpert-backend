@@ -1,0 +1,1 @@
+Given two arrays (one of integers, one of booleans), return an array of booleans where each element is true if the corresponding integer is positive.
