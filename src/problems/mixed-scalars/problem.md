@@ -1,0 +1,1 @@
+Given a name (string), age (integer), and isStudent (boolean), return an array containing the name repeated twice.

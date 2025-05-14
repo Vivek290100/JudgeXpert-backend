@@ -1,1 +1,0 @@
-def isEven(num: int) -> bool:

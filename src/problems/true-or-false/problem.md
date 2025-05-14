@@ -1,1 +1,0 @@
-Given an integer num, return true if the number is even, and false if it is odd.
