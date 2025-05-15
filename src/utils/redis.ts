@@ -51,6 +51,21 @@ class RedisService implements IRedisService {
     await this.client.disconnect();
     console.log("🌏 Redis Disconnected");
   }
+
+  async acquireLock(key: string, ttlSeconds: number): Promise<boolean> {
+  // Try to set the key with NX (only if it doesn't exist) and EX (expire time)
+  const result = await this.client.set(key, "locked", { NX: true, EX: ttlSeconds });
+  return result === "OK";
+}
+
+async releaseLock(key: string): Promise<void> {
+  await this.client.del(key);
+}
+
+async hasLock(key: string): Promise<boolean> {
+  const value = await this.client.get(key);
+  return value !== null;
+}
 }
 
 export default RedisService;

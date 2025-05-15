@@ -41,13 +41,12 @@ import { ISubscriptionRepository } from "../interfaces/repositoryInterfaces/ISub
 import SubscriptionRepository from "../repositories/SubscriptionRepository";
 import { ProblemFolderService } from "../services/ProblemFolderService";
 
-
 interface DependenciesType {
   userRepository: IUserRepository;
   refreshTokenRepository: IRefreshTokenRepository;
   jwtService: IJWTService;
   emailService: IEmailService;
-  redisService: IRedisService;
+  redisService: RedisService; // Change from IRedisService to RedisService
   userService: IUserService;
   userController: UserController;
   adminService: IAdminService;
@@ -71,7 +70,7 @@ interface DependenciesType {
 
 const initializeDependencies = (io?: Server): DependenciesType => {
   const userRepository: IUserRepository = new UserRepository();
-  const redisService: IRedisService = new RedisService(
+  const redisService: RedisService = new RedisService( // Change type to RedisService
     CONFIG.REDIS_USERNAME,
     CONFIG.REDIS_PASSWORD,
     CONFIG.REDIS_HOST,
@@ -88,7 +87,7 @@ const initializeDependencies = (io?: Server): DependenciesType => {
   const problemRepository: IProblemRepository = new ProblemRepository();
   const contestRepository: IContestRepository = new ContestRepository();
   const subscriptionRepository: ISubscriptionRepository = new SubscriptionRepository();
-  const subscriptionService: ISubscriptionService = new SubscriptionService(subscriptionRepository, userRepository);
+  const subscriptionService: ISubscriptionService = new SubscriptionService(subscriptionRepository, userRepository, redisService);
 
   // Instantiate adminService with all required repositories
   const adminService: IAdminService = new AdminService(userRepository, problemRepository, contestRepository, subscriptionRepository);

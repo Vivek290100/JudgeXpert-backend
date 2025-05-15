@@ -7,11 +7,13 @@ import { StripeUtils } from "../utils/stripe";
 import { CONFIG } from "../config/config";
 import Stripe from "stripe";
 import { CustomStripeSubscription } from "../types/IStripe";
+import RedisService from "../utils/redis";
 
 export default class SubscriptionService implements ISubscriptionService {
   constructor(
     private subscriptionRepository: ISubscriptionRepository,
-    private userRepository: IUserRepository
+    private userRepository: IUserRepository,
+    private redisService: RedisService
   ) {}
 
   async createCheckoutSession(userId: string, planId: string): Promise<{ checkoutUrl: string }> {
@@ -35,60 +37,87 @@ export default class SubscriptionService implements ISubscriptionService {
       throw new Error("You already have an active subscription. Please wait until it expires or cancel it.");
     }
 
-    const priceId = planId === "monthly" ? CONFIG.STRIPE_MONTHLY_PRICE_ID : CONFIG.STRIPE_YEARLY_PRICE_ID;
-    // const price = planId === "monthly" ? 299 : 2499; // Price in rupees
+    // Define the lock key and TTL (e.g., 15 minutes for the checkout session)
+    const lockKey = `checkout_lock:${userId}`;
+    const lockTTL = 15 * 60; // 15 minutes in seconds
 
-    if (!priceId) {
-      throw new Error(`Price ID for ${planId} plan is not configured`);
+    // Check if a lock already exists
+    const hasLock = await this.redisService.hasLock(lockKey);
+    if (hasLock) {
+      throw new Error("Another checkout session is already in progress. Please complete or cancel it first.");
     }
 
-    let stripeCustomerId = user.stripeCustomerId;
-
-    if (!stripeCustomerId) {
-      const customer = await StripeUtils.createCustomer(user.email, user?.userName || "", { userId });
-      stripeCustomerId = customer.id;
-      await this.userRepository.update(userId, { stripeCustomerId });
+    // Acquire a lock
+    const lockAcquired = await this.redisService.acquireLock(lockKey, lockTTL);
+    if (!lockAcquired) {
+      throw new Error("Failed to acquire checkout lock. Please try again.");
     }
 
-    const session = await StripeUtils.createCheckoutSession(
-      stripeCustomerId,
-      priceId,
-      `${CONFIG.FRONTEND_URL}/user/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
-      `${CONFIG.FRONTEND_URL}/user/subscription?canceled=true`,
-      { userId, planId }
-    );
+    try {
+      const priceId = planId === "monthly" ? CONFIG.STRIPE_MONTHLY_PRICE_ID : CONFIG.STRIPE_YEARLY_PRICE_ID;
+      if (!priceId) {
+        throw new Error(`Price ID for ${planId} plan is not configured`);
+      }
 
-    return { checkoutUrl: session.url! };
-  }
+      let stripeCustomerId = user.stripeCustomerId;
 
-  async handleWebhookEvent(payload: Buffer, signature: string): Promise<void> {
-    const event = StripeUtils.constructWebhookEvent(payload, signature);
+      if (!stripeCustomerId) {
+        const customer = await StripeUtils.createCustomer(user.email, user?.userName || "", { userId });
+        stripeCustomerId = customer.id;
+        await this.userRepository.update(userId, { stripeCustomerId });
+      }
 
-    switch (event.type) {
-      case "customer.subscription.created":
-      case "customer.subscription.updated":
-      case "customer.subscription.deleted":
-        const subscription = event.data.object as CustomStripeSubscription;
-        await this.handleSubscriptionEvent(event.type, subscription);
-        break;
-      case "checkout.session.completed":
-        const session = event.data.object as Stripe.Checkout.Session;
-        await this.handleCheckoutSessionCompleted(session);
-        break;
-      case "invoice.paid":
-        const invoice = event.data.object as Stripe.Invoice;
-        await this.handleInvoicePaid(invoice);
-        break;
-      case "invoice.payment_succeeded":
-        const paymentSuccess = event.data.object as Stripe.Invoice;
-        await this.handleInvoicePaymentSucceeded(paymentSuccess);
-        break;
-      default:
-        console.log(`Unhandled event type: ${event.type}`);
+      const session = await StripeUtils.createCheckoutSession(
+        stripeCustomerId,
+        priceId,
+        `${CONFIG.FRONTEND_URL}/user/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
+        `${CONFIG.FRONTEND_URL}/user/subscription?canceled=true`,
+        { userId, planId }
+      );
+
+      // Store the session ID in Redis for later verification
+      await this.redisService.set(`checkout_session:${userId}`, session.id, { EX: lockTTL });
+
+      return { checkoutUrl: session.url! };
+    } catch (error) {
+      // Release the lock if an error occurs
+      await this.redisService.releaseLock(lockKey);
+      throw error;
     }
   }
 
-  private async handleCheckoutSessionCompleted(session: Stripe.Checkout.Session): Promise<void> {
+async handleWebhookEvent(payload: Buffer, signature: string): Promise<void> {
+  const event = StripeUtils.constructWebhookEvent(payload, signature);
+
+  switch (event.type) {
+    case "checkout.session.completed":
+      const completedSession = event.data.object as Stripe.Checkout.Session; // Renamed to completedSession
+      await this.handleCheckoutSessionCompleted(completedSession);
+      break;
+    case "checkout.session.expired":
+      const expiredSession = event.data.object as Stripe.Checkout.Session; // Renamed to expiredSession
+      await this.handleCheckoutSessionExpired(expiredSession);
+      break;
+    case "customer.subscription.created":
+    case "customer.subscription.updated":
+    case "customer.subscription.deleted":
+      const subscription = event.data.object as CustomStripeSubscription;
+      await this.handleSubscriptionEvent(event.type, subscription);
+      break;
+    case "invoice.paid":
+      const invoice = event.data.object as Stripe.Invoice;
+      await this.handleInvoicePaid(invoice);
+      break;
+    case "invoice.payment_succeeded":
+      const paymentSuccess = event.data.object as Stripe.Invoice;
+      await this.handleInvoicePaymentSucceeded(paymentSuccess);
+      break;
+    default:
+      console.log(`Unhandled event type: ${event.type}`);
+  }
+}
+
+private async handleCheckoutSessionCompleted(session: Stripe.Checkout.Session): Promise<void> {
     const userId = session.metadata?.userId;
     const planId = session.metadata?.planId;
     const stripeSubscriptionId = session.subscription as string;
@@ -103,12 +132,18 @@ export default class SubscriptionService implements ISubscriptionService {
       throw new Error("No subscription ID in checkout session");
     }
 
+    // Verify the session ID matches the one stored in Redis
+    const storedSessionId = await this.redisService.get(`checkout_session:${userId}`);
+    if (storedSessionId !== session.id) {
+      throw new Error("Invalid checkout session ID");
+    }
+
     const subscriptionData: Partial<ISubscription> = {
       userId: new Types.ObjectId(userId),
       stripeCustomerId: session.customer as string,
       stripeSubscriptionId,
       planId,
-      price: planId === "monthly" ? 299 : 2499, // Price in rupees
+      price: planId === "monthly" ? 299 : 2499,
       status: "active",
       currentPeriodEnd: new Date((session.expires_at || Date.now() / 1000 + 30 * 24 * 60 * 60) * 1000),
     };
@@ -119,6 +154,19 @@ export default class SubscriptionService implements ISubscriptionService {
     }
 
     await this.updateUserPremiumStatus(userId);
+
+    // Release the lock and clear the session ID
+    await this.redisService.releaseLock(`checkout_lock:${userId}`);
+    await this.redisService.del(`checkout_session:${userId}`);
+  }
+
+  private async handleCheckoutSessionExpired(session: Stripe.Checkout.Session): Promise<void> {
+    const userId = session.metadata?.userId;
+    if (userId && Types.ObjectId.isValid(userId)) {
+      // Release the lock and clear the session ID
+      await this.redisService.releaseLock(`checkout_lock:${userId}`);
+      await this.redisService.del(`checkout_session:${userId}`);
+    }
   }
 
   private async handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
