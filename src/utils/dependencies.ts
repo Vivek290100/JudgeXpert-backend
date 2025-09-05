@@ -46,7 +46,7 @@ interface DependenciesType {
   refreshTokenRepository: IRefreshTokenRepository;
   jwtService: IJWTService;
   emailService: IEmailService;
-  redisService: RedisService; // Change from IRedisService to RedisService
+  redisService: RedisService;
   userService: IUserService;
   userController: UserController;
   adminService: IAdminService;
@@ -70,7 +70,7 @@ interface DependenciesType {
 
 const initializeDependencies = (io?: Server): DependenciesType => {
   const userRepository: IUserRepository = new UserRepository();
-  const redisService: RedisService = new RedisService( // Change type to RedisService
+  const redisService: RedisService = new RedisService(
     CONFIG.REDIS_USERNAME,
     CONFIG.REDIS_PASSWORD,
     CONFIG.REDIS_HOST,
