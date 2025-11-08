@@ -19,23 +19,12 @@ app.set("trust proxy", 1);
 // app.use(helmet());
 // app.use(mongoSanitize());
 
-app.use(((req, res, next) => {
-  if (req.method === "OPTIONS") {
-    res.set("Access-Control-Allow-Origin", CONFIG.FRONTEND_URL);
-    res.set("Access-Control-Allow-Credentials", "true");
-    res.set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,PATCH,OPTIONS");
-    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
-    return res.status(204).end();
-  }
-  next();
-}) as RequestHandler);
-
 app.use(
   cors({
-    origin: CONFIG.FRONTEND_URL,
+    origin: CONFIG.FRONTEND_URL, 
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   })
 );
 
