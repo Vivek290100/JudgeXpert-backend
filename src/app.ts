@@ -1,4 +1,4 @@
-import express from "express";
+import express, { RequestHandler } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
@@ -19,6 +19,17 @@ app.set("trust proxy", 1);
 // app.use(helmet());
 // app.use(mongoSanitize());
 
+app.use(((req, res, next) => {
+  if (req.method === "OPTIONS") {
+    res.set("Access-Control-Allow-Origin", CONFIG.FRONTEND_URL);
+    res.set("Access-Control-Allow-Credentials", "true");
+    res.set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,PATCH,OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+    return res.status(204).end();
+  }
+  next();
+}) as RequestHandler);
+
 app.use(
   cors({
     origin: CONFIG.FRONTEND_URL,
@@ -28,13 +39,6 @@ app.use(
   })
 );
 
-app.options("*", (req, res) => {
-  res.header("Access-Control-Allow-Origin", CONFIG.FRONTEND_URL);
-  res.header("Access-Control-Allow-Credentials", "true");
-  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,PATCH,OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
-  res.sendStatus(204);
-});
 
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
