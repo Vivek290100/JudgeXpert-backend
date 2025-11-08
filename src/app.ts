@@ -16,8 +16,8 @@ connectDB();
 const app = express();
 app.set("trust proxy", 1);
 
-app.use(helmet());
-app.use(mongoSanitize());
+// app.use(helmet());
+// app.use(mongoSanitize());
 
 app.use(
   cors({
@@ -27,6 +27,21 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+app.options("*", (req, res) => {
+  res.header("Access-Control-Allow-Origin", CONFIG.FRONTEND_URL);
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,PATCH,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With");
+  res.sendStatus(204);
+});
+
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+
+app.use(mongoSanitize());
 
 app.use("/subscriptions/webhook", express.raw({ type: "application/json" }));
 
