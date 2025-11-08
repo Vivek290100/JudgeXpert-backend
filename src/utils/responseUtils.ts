@@ -74,9 +74,11 @@ export const filterProblemResponse = (problem: any) => ({
 export const setAuthCookie = (res: Response, accessToken: string): void => {
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    // secure: process.env.NODE_ENV === "production",
+    secure: true,
     maxAge: 24 * 60 * 60 * 1000, // 1 day
-    sameSite: "lax",
+    // sameSite: "lax",
+    sameSite: "none",
     path: "/",
   });
 };
