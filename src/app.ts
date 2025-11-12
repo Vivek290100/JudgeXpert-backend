@@ -1,4 +1,5 @@
-import express, { RequestHandler } from "express";
+// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\app.ts
+import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
@@ -16,25 +17,17 @@ connectDB();
 const app = express();
 app.set("trust proxy", 1);
 
-// app.use(helmet());
-// app.use(mongoSanitize());
+app.use(helmet());
+app.use(mongoSanitize());
 
 app.use(
   cors({
-    origin: CONFIG.FRONTEND_URL, 
+    origin: CONFIG.FRONTEND_URL,
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
-
-
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
-
-
-app.use(mongoSanitize());
 
 app.use("/subscriptions/webhook", express.raw({ type: "application/json" }));
 
@@ -47,4 +40,3 @@ app.use("/", userRouter);
 app.use("/admin", adminRouter)
 
 export default app;
-   

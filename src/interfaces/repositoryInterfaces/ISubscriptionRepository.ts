@@ -1,3 +1,4 @@
+// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\interfaces\repositoryInterfaces\ISubscriptionRepository.ts
 import { ISubscription } from "../../types/ISubscription";
 
 export interface ISubscriptionRepository {
