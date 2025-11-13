@@ -5,7 +5,7 @@
   "main": "src/server.ts",
   "scripts": {
     "dev": "nodemon src/server.ts",
-    "start": "node dist/server.js",
+    "start": "ts-node src/server.ts",
     "build": "tsc && cpy \"src/problems/**/*\" dist/problems",
     "test": "jest",
     "lint": "eslint src --ext .ts"
