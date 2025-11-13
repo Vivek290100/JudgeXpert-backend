@@ -2,7 +2,6 @@ import { IUser } from "../types/IUser";
 import { randomInt } from "crypto";
 import bcrypt from "bcrypt";
 import { IUserService } from "../interfaces/serviceInterfaces/IUserService";
-import { uploadToS3 } from "../utils/s3";
 import { CONFIG } from "../config/config";
 import { OAuth2Client } from "google-auth-library";
 import { IUserRepository } from "../interfaces/repositoryInterfaces/IUserRepository";
@@ -12,6 +11,7 @@ import { IJWTService } from "../interfaces/utilInterfaces/IJWTService";
 import { IEmailService } from "../interfaces/utilInterfaces/IEmailService";
 import { IRedisService } from "../interfaces/utilInterfaces/IRedisService";
 import { ILeaderboardUser } from "../types/ILeaderboardUser";
+import { uploadToCloudinary } from "../utils/cloudinary";
 
 class UserService implements IUserService {
   private _googleClient = new OAuth2Client(CONFIG.GOOGLE_CLIENT_ID);
@@ -230,8 +230,8 @@ class UserService implements IUserService {
     if (data.linkedin) updateData.linkedin = data.linkedin;
 
     if (data.profileImage) {
-      const s3Url = await uploadToS3(data.profileImage);
-      updateData.profileImage = s3Url;
+      const cloudinaryUrl = await uploadToCloudinary(data.profileImage);
+      updateData.profileImage = cloudinaryUrl;
     }
 
     const updatedUser = await this._userRepository.update(data.userId, updateData);

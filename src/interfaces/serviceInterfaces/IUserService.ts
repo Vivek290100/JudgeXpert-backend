@@ -1,4 +1,3 @@
-// Backend\src\interfaces\IUserService.ts
 import { ILeaderboardUser } from "../../types/ILeaderboardUser";
 import { IUser } from "../../types/IUser";
 

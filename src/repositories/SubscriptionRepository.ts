@@ -1,4 +1,3 @@
-// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\repositories\SubscriptionRepository.ts
 import { Types } from "mongoose";
 import Subscription from "../models/SubscriptionModel";
 import { ISubscription } from "../types/ISubscription";

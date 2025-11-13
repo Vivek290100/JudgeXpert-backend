@@ -10,7 +10,6 @@ class ContestService implements IContestService {
   async createContest(data: any): Promise<any> {
     console.log("service", data);
 
-    // Validate that startTime and endTime are valid Date objects
     const startTime = new Date(data.startTime);
     const endTime = new Date(data.endTime);
 
@@ -56,7 +55,6 @@ class ContestService implements IContestService {
       this.contestRepository.countDocuments({ ...userQuery, endTime: { $lt: now } }),
     ]);
 
-    // Convert dates to IST for each contest
     const formattedContests = contests.map((contest) => ({
       ...contest,
       startTime: moment(contest.startTime).tz("Asia/Kolkata").format("YYYY-MM-DDTHH:mm:ss"),
@@ -84,7 +82,6 @@ class ContestService implements IContestService {
 
     const latestSubmissions = await this.getLatestSubmissionsForContest(contestId, contest.problems);
 
-    // Convert dates to desired timezone (e.g., IST)
     return {
       ...contest,
       startTime: moment(contest.startTime).tz("Asia/Kolkata").format("YYYY-MM-DDTHH:mm:ss"),

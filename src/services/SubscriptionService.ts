@@ -38,17 +38,14 @@ export default class SubscriptionService implements ISubscriptionService {
       throw new Error("You already have an active subscription. Please wait until it expires or cancel it.");
     }
 
-    // Define the lock key and TTL (e.g., 15 minutes for the checkout session)
     const lockKey = `checkout_lock:${userId}`;
-    const lockTTL = 15 * 60; // 15 minutes in seconds
+    const lockTTL = 15 * 60;
 
-    // Check if a lock already exists
     const hasLock = await this.redisService.hasLock(lockKey);
     if (hasLock) {
       throw new Error("Another checkout session is already in progress. Please complete or cancel it first.");
     }
 
-    // Acquire a lock
     const lockAcquired = await this.redisService.acquireLock(lockKey, lockTTL);
     if (!lockAcquired) {
       throw new Error("Failed to acquire checkout lock. Please try again.");
@@ -76,12 +73,10 @@ export default class SubscriptionService implements ISubscriptionService {
         { userId, planId }
       );
 
-      // Store the session ID in Redis for later verification
       await this.redisService.set(`checkout_session:${userId}`, session.id, { EX: lockTTL });
 
       return { checkoutUrl: session.url! };
     } catch (error) {
-      // Release the lock if an error occurs
       await this.redisService.releaseLock(lockKey);
       throw error;
     }
@@ -92,11 +87,11 @@ async handleWebhookEvent(payload: Buffer, signature: string): Promise<void> {
 
   switch (event.type) {
     case "checkout.session.completed":
-      const completedSession = event.data.object as Stripe.Checkout.Session; // Renamed to completedSession
+      const completedSession = event.data.object as Stripe.Checkout.Session;
       await this.handleCheckoutSessionCompleted(completedSession);
       break;
     case "checkout.session.expired":
-      const expiredSession = event.data.object as Stripe.Checkout.Session; // Renamed to expiredSession
+      const expiredSession = event.data.object as Stripe.Checkout.Session;
       await this.handleCheckoutSessionExpired(expiredSession);
       break;
     case "customer.subscription.created":
@@ -133,7 +128,6 @@ private async handleCheckoutSessionCompleted(session: Stripe.Checkout.Session): 
       throw new Error("No subscription ID in checkout session");
     }
 
-    // Verify the session ID matches the one stored in Redis
     const storedSessionId = await this.redisService.get(`checkout_session:${userId}`);
     if (storedSessionId !== session.id) {
       throw new Error("Invalid checkout session ID");
@@ -156,7 +150,6 @@ private async handleCheckoutSessionCompleted(session: Stripe.Checkout.Session): 
 
     await this.updateUserPremiumStatus(userId);
 
-    // Release the lock and clear the session ID
     await this.redisService.releaseLock(`checkout_lock:${userId}`);
     await this.redisService.del(`checkout_session:${userId}`);
   }
@@ -164,7 +157,6 @@ private async handleCheckoutSessionCompleted(session: Stripe.Checkout.Session): 
   private async handleCheckoutSessionExpired(session: Stripe.Checkout.Session): Promise<void> {
     const userId = session.metadata?.userId;
     if (userId && Types.ObjectId.isValid(userId)) {
-      // Release the lock and clear the session ID
       await this.redisService.releaseLock(`checkout_lock:${userId}`);
       await this.redisService.del(`checkout_session:${userId}`);
     }

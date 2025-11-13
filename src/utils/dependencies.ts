@@ -1,4 +1,3 @@
-// Backend\src\utils\dependencies.ts
 import { Server } from "socket.io";
 import UserRepository from "../repositories/UserRepository";
 import RefreshTokenRepository from "../repositories/RefreshTokenRepository";
@@ -83,17 +82,14 @@ const initializeDependencies = (io?: Server): DependenciesType => {
   const userService: IUserService = new UserService(userRepository, refreshTokenRepository, jwtService, emailService, redisService);
   const userController = new UserController(userService);
 
-  // Declare repositories needed for adminService and problemController
   const problemRepository: IProblemRepository = new ProblemRepository();
   const contestRepository: IContestRepository = new ContestRepository();
   const subscriptionRepository: ISubscriptionRepository = new SubscriptionRepository();
   const subscriptionService: ISubscriptionService = new SubscriptionService(subscriptionRepository, userRepository, redisService);
 
-  // Instantiate adminService with all required repositories
   const adminService: IAdminService = new AdminService(userRepository, problemRepository, contestRepository, subscriptionRepository);
   const adminController = new AdminController(adminService);
 
-  // Now instantiate problemService and problemController
   const problemService: IProblemService = new ProblemService(problemRepository);
   const problemController = new ProblemController(problemService, subscriptionService);
 

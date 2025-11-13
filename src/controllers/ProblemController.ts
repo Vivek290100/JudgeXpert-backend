@@ -102,7 +102,6 @@ class ProblemController {
         throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
       }
 
-      // Check subscription for premium problems
       if (problem.status === "premium") {
         const canAccess = await this.canAccessPremium(req.user);
         if (!canAccess) {
@@ -144,7 +143,6 @@ class ProblemController {
       const userId = req.user?.userId;
       const userRole = req.user?.role;
 
-      // Restrict blocked problems for non-admins
       if (userRole !== "admin") {
         query.isBlocked = { $ne: true };
       }
@@ -179,7 +177,6 @@ class ProblemController {
 
       const { problems, total } = await this.problemService.getProblemsPaginated(page, limit, query);
 
-      // Fetch total count of accessible problems (excluding blocked ones for non-admins)
       const totalProblemsInDb = await this.problemService.countProblems(
         userRole === "admin" ? {} : { isBlocked: { $ne: true } }
       );
@@ -298,7 +295,6 @@ class ProblemController {
         throw new NotFoundError(ErrorMessages.FAILED_TO_PROCESS_PROBLEM);
       }
 
-      // Delete the problem folder after successful processing
       const basePath = process.env.PROBLEM_BASE_PATH || path.join(__dirname, "../problems");
       const fullProblemDir = path.join(basePath, problemDir);
       try {
@@ -306,7 +302,6 @@ class ProblemController {
         console.log(`Successfully deleted problem folder: ${fullProblemDir}`);
       } catch (deleteError: any) {
         console.error(`Failed to delete problem folder ${fullProblemDir}:`, deleteError.message);
-        // Continue with success response, as folder deletion is secondary
       }
 
       sendResponse(res, {
@@ -469,7 +464,6 @@ class ProblemController {
         throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
       }
 
-      // Check subscription for premium problems
       const problem = await this.problemService.getProblemById(problemId);
       if (!problem) {
         throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);

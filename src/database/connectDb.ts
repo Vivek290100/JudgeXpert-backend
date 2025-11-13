@@ -1,4 +1,3 @@
-//Backend\src\database\connectDb.ts
 import mongoose from "mongoose";
 import { CONFIG } from "../config/config";
 

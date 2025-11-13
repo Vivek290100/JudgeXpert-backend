@@ -1,4 +1,3 @@
-// Backend\src\middlewares\adminMiddleware.ts
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { CONFIG } from "../config/config";
@@ -11,7 +10,6 @@ export interface AuthRequest extends Request {
 
 const adminMiddleware = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   const token = req.cookies?.accessToken;
-  // console.log("Middleware - Cookies received:", req.cookies);
   if (!token) {
     sendResponse(res, {
       success: false,

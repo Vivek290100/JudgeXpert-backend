@@ -32,7 +32,6 @@ class ProblemService implements IProblemService {
     const outputsDir = path.join(fullProblemDir, "outputs");
     const boilerplateDir = path.join(fullProblemDir, "boilerplate");
 
-    // Validate directory structure
     try {
       await Promise.all([
         fs.access(structurePath),
@@ -46,7 +45,6 @@ class ProblemService implements IProblemService {
       throw new BadRequestError(ErrorMessages.INVALID_PROBLEM_DIR_STRUCTURE(problemDir));
     }
 
-    // Read structure and problem description
     let description: string, structure: string;
     try {
       [description, structure] = await Promise.all([
@@ -58,10 +56,8 @@ class ProblemService implements IProblemService {
       throw new BadRequestError("Failed to read structure.md or problem.md");
     }
 
-    // Normalize newlines and trim the structure content
     structure = structure.replace(/\r\n/g, '\n').trim();
 
-    // Parse structure.md
     const titleMatch = structure.match(/Problem Name: "(.+)"/);
     const functionNameMatch = structure.match(/Function Name: (\w+)/);
     const difficultyMatch = structure.match(/Difficulty: (\w+)/);
@@ -75,7 +71,6 @@ class ProblemService implements IProblemService {
     const functionName = functionNameMatch[1] || '';
     const difficulty = difficultyMatch[1]?.toUpperCase() || 'MEDIUM';
 
-    // Parse input structure
     const inputSectionMatch = structure.match(/## Input Structure\n([\s\S]+?)(?=\n##|\n$)/);
     const inputSection = inputSectionMatch ? inputSectionMatch[1].trim() : '';
     const inputFields = inputSection.split('- Input Field:').slice(1);
@@ -89,7 +84,6 @@ class ProblemService implements IProblemService {
       return { name: nameMatch[1], type: typeMatch[1] };
     });
 
-    // Parse output structure
     const outputSectionMatch = structure.match(/## Output Structure\n([\s\S]+?)(?=\n##|\n$|$)/);
     const outputSection = outputSectionMatch ? outputSectionMatch[1].trim() : '';
     const outputFields = outputSection.split('- Output Field:').slice(1);
@@ -103,7 +97,6 @@ class ProblemService implements IProblemService {
       return { name: nameMatch[1], type: typeMatch[1] };
     });
 
-    // Parse test cases
     let inputFiles: string[], outputFiles: string[];
     try {
       [inputFiles, outputFiles] = await Promise.all([
@@ -161,7 +154,6 @@ class ProblemService implements IProblemService {
       testCases.push({ inputs, outputs, index: testId });
     }
 
-    // Create or update the Problem
     const slug = path.basename(problemDir).toLowerCase().replace(/\./g, '-');
     const problemData: Partial<IProblem> = {
       title,
@@ -191,7 +183,6 @@ class ProblemService implements IProblemService {
       throw new BadRequestError("Failed to save problem to database",_error);
     }
 
-    // Save test cases
     const testCaseIds: Types.ObjectId[] = [];
     try {
       for (const testCase of testCases) {
@@ -261,7 +252,6 @@ class ProblemService implements IProblemService {
       throw new NotFoundError(ErrorMessages.FAILED_TO_PROCESS_PROBLEM);
     }
 
-    // console.log("Final problem:", updatedProblem);
     return updatedProblem;
   }
 

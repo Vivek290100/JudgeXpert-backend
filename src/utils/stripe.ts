@@ -1,4 +1,3 @@
-// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\utils\stripe.ts
 import Stripe from "stripe";
 import { CONFIG } from "../config/config";
 

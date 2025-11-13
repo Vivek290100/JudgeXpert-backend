@@ -96,7 +96,6 @@ class NotificationService implements INotificationService {
 
   async notifyNewProblem(slug: string): Promise<void> {
     if (this.notifiedProblems.has(slug)) {
-      // console.log("Problem already notified:", slug);
       return;
     }
 

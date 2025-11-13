@@ -1,4 +1,3 @@
-// Backend\src\models\SubmissionModel.ts
 import { model, Schema } from "mongoose";
 import { ISubmission } from "../types/ISubmission";
 

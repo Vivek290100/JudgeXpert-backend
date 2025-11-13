@@ -1,4 +1,3 @@
-// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\routes\UserRoutes.ts
 import express, { Router } from "express";
 import authMiddleware from "../middlewares/authMiddleware";
 import { ProblemRoutes, UserRoutes } from "../utils/constants";

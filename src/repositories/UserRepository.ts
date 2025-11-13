@@ -1,4 +1,3 @@
-// Backend\src\repositories\UserRepository.ts
 import { FilterQuery } from "mongoose";
 import { IUser } from "../types/IUser";
 import User from "../models/UserModel";

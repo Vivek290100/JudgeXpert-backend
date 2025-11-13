@@ -1,4 +1,3 @@
-// Backend\src\interfaces\IRefreshTokenRepository.ts
 export interface IRefreshTokenRepository {
   create(data: { userId: string; token: string }): Promise<void>;
   findByUserId(userId: string): Promise<string | null>; 

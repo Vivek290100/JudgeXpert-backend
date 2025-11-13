@@ -1,9 +1,8 @@
-// Backend\src\repositories\RefreshTokenRepository.ts
 import { IRefreshTokenRepository } from "../interfaces/repositoryInterfaces/IRefreshTokenRepository";
 import { IRedisService } from "../interfaces/utilInterfaces/IRedisService";
 
 class RefreshTokenRepository implements IRefreshTokenRepository {
-  private readonly TOKEN_EXPIRY_SECONDS = 30 * 24 * 60 * 60; // 30 days
+  private readonly TOKEN_EXPIRY_SECONDS = 30 * 24 * 60 * 60; //30 days
   private readonly PREFIX = "refreshToken:";
 
   constructor(private redisService: IRedisService) {}

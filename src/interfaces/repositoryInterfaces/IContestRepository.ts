@@ -1,4 +1,3 @@
-// Backend\src\interfaces\repositoryInterfaces\IContestRepository.ts
 import { Document, FilterQuery } from "mongoose";
 import { IBaseRepository } from "../baseRepositoryInterface/IBaseRepositories";
 

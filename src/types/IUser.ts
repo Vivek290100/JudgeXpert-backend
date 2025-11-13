@@ -1,4 +1,3 @@
-// Backend\src\interfaces\IUser.ts
 import { Document, Types } from "mongoose";
 
 export interface IUser extends Document {

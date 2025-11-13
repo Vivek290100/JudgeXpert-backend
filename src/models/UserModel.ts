@@ -1,4 +1,3 @@
-// Backend\src\models\UserModel.ts
 import { Schema, model } from "mongoose";
 import { IUser } from "../types/IUser";
 

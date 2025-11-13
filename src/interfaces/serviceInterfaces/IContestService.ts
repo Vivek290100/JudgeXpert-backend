@@ -1,4 +1,3 @@
-// Backend\src\interfaces\serviceInterfaces\IContestService.ts
 import { FilterQuery } from "mongoose";
 
 export interface IContestService {

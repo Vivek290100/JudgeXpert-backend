@@ -1,4 +1,3 @@
-// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\utils\constants.ts
 export const UserRoutes = {
     SIGNUP: "/signup",
     LOGIN: "/login",

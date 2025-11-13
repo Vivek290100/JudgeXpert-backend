@@ -1,4 +1,3 @@
-//Backend\src\interfaces\baseRepositoryInterface\IBaseRepositories.ts
 import { FilterQuery, UpdateQuery } from "mongoose";
 import { Document } from "mongoose";
 

@@ -1,4 +1,3 @@
-// Backend\src\repositories\ContestRepository.ts
 import { FilterQuery, Types } from "mongoose";
 import BaseRepository from "./BaseRepository";
 import Contest from "../models/ContestModel";
