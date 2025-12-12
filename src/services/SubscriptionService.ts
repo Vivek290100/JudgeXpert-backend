@@ -1,4 +1,3 @@
-// C:\Users\vivek_laxvnt1\Desktop\JudgeXpert\Backend\src\services\SubscriptionService.ts
 import { Types } from "mongoose";
 import { ISubscriptionRepository } from "../interfaces/repositoryInterfaces/ISubscriptionRepository";
 import { IUserRepository } from "../interfaces/repositoryInterfaces/IUserRepository";
@@ -12,9 +11,9 @@ import RedisService from "../utils/redis";
 
 export default class SubscriptionService implements ISubscriptionService {
   constructor(
-    private subscriptionRepository: ISubscriptionRepository,
-    private userRepository: IUserRepository,
-    private redisService: RedisService
+    private _subscriptionRepository: ISubscriptionRepository,
+    private _userRepository: IUserRepository,
+    private _redisService: RedisService
   ) {}
 
   async createCheckoutSession(userId: string, planId: string): Promise<{ checkoutUrl: string }> {
@@ -26,10 +25,10 @@ export default class SubscriptionService implements ISubscriptionService {
       throw new Error("Invalid user ID format");
     }
 
-    const user = await this.userRepository.findById(userId);
+    const user = await this._userRepository.findById(userId);
     if (!user) throw new Error("User not found");
 
-    const existingSubscription = await this.subscriptionRepository.findByUserId(userId);
+    const existingSubscription = await this._subscriptionRepository.findByUserId(userId);
     if (
       existingSubscription &&
       existingSubscription.status === "active" &&
@@ -41,12 +40,12 @@ export default class SubscriptionService implements ISubscriptionService {
     const lockKey = `checkout_lock:${userId}`;
     const lockTTL = 15 * 60;
 
-    const hasLock = await this.redisService.hasLock(lockKey);
+    const hasLock = await this._redisService.hasLock(lockKey);
     if (hasLock) {
       throw new Error("Another checkout session is already in progress. Please complete or cancel it first.");
     }
 
-    const lockAcquired = await this.redisService.acquireLock(lockKey, lockTTL);
+    const lockAcquired = await this._redisService.acquireLock(lockKey, lockTTL);
     if (!lockAcquired) {
       throw new Error("Failed to acquire checkout lock. Please try again.");
     }
@@ -62,7 +61,7 @@ export default class SubscriptionService implements ISubscriptionService {
       if (!stripeCustomerId) {
         const customer = await StripeUtils.createCustomer(user.email, user?.userName || "", { userId });
         stripeCustomerId = customer.id;
-        await this.userRepository.update(userId, { stripeCustomerId });
+        await this._userRepository.update(userId, { stripeCustomerId });
       }
 
       const session = await StripeUtils.createCheckoutSession(
@@ -73,11 +72,11 @@ export default class SubscriptionService implements ISubscriptionService {
         { userId, planId }
       );
 
-      await this.redisService.set(`checkout_session:${userId}`, session.id, { EX: lockTTL });
+      await this._redisService.set(`checkout_session:${userId}`, session.id, { EX: lockTTL });
 
       return { checkoutUrl: session.url! };
     } catch (error) {
-      await this.redisService.releaseLock(lockKey);
+      await this._redisService.releaseLock(lockKey);
       throw error;
     }
   }
@@ -128,7 +127,7 @@ private async handleCheckoutSessionCompleted(session: Stripe.Checkout.Session): 
       throw new Error("No subscription ID in checkout session");
     }
 
-    const storedSessionId = await this.redisService.get(`checkout_session:${userId}`);
+    const storedSessionId = await this._redisService.get(`checkout_session:${userId}`);
     if (storedSessionId !== session.id) {
       throw new Error("Invalid checkout session ID");
     }
@@ -143,22 +142,22 @@ private async handleCheckoutSessionCompleted(session: Stripe.Checkout.Session): 
       currentPeriodEnd: new Date((session.expires_at || Date.now() / 1000 + 30 * 24 * 60 * 60) * 1000),
     };
 
-    const existingSubscription = await this.subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId);
+    const existingSubscription = await this._subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId);
     if (!existingSubscription) {
-      await this.subscriptionRepository.create(subscriptionData);
+      await this._subscriptionRepository.create(subscriptionData);
     }
 
     await this.updateUserPremiumStatus(userId);
 
-    await this.redisService.releaseLock(`checkout_lock:${userId}`);
-    await this.redisService.del(`checkout_session:${userId}`);
+    await this._redisService.releaseLock(`checkout_lock:${userId}`);
+    await this._redisService.del(`checkout_session:${userId}`);
   }
 
   private async handleCheckoutSessionExpired(session: Stripe.Checkout.Session): Promise<void> {
     const userId = session.metadata?.userId;
     if (userId && Types.ObjectId.isValid(userId)) {
-      await this.redisService.releaseLock(`checkout_lock:${userId}`);
-      await this.redisService.del(`checkout_session:${userId}`);
+      await this._redisService.releaseLock(`checkout_lock:${userId}`);
+      await this._redisService.del(`checkout_session:${userId}`);
     }
   }
 
@@ -169,7 +168,7 @@ private async handleCheckoutSessionCompleted(session: Stripe.Checkout.Session): 
       return;
     }
 
-    const subscription = await this.subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId);
+    const subscription = await this._subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId);
     if (!subscription) {
       console.log(`No subscription found for subscription ID: ${stripeSubscriptionId}`);
       return;
@@ -179,7 +178,7 @@ private async handleCheckoutSessionCompleted(session: Stripe.Checkout.Session): 
       ? new Date(invoice.lines.data[0].period.end * 1000)
       : subscription.currentPeriodEnd;
 
-    await this.subscriptionRepository.update(subscription._id!.toString(), {
+    await this._subscriptionRepository.update(subscription._id!.toString(), {
       status: "active",
       currentPeriodEnd: periodEnd,
     });
@@ -194,13 +193,13 @@ private async handleCheckoutSessionCompleted(session: Stripe.Checkout.Session): 
       return;
     }
 
-    const subscription = await this.subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId);
+    const subscription = await this._subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId);
     if (!subscription) {
       console.log(`No subscription found for subscription ID: ${stripeSubscriptionId}`);
       return;
     }
 
-    await this.subscriptionRepository.update(subscription._id!.toString(), {
+    await this._subscriptionRepository.update(subscription._id!.toString(), {
       status: "active",
     });
 
@@ -245,12 +244,12 @@ private async handleCheckoutSessionCompleted(session: Stripe.Checkout.Session): 
       currentPeriodEnd,
     };
 
-    const existingSubscription = await this.subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId);
+    const existingSubscription = await this._subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId);
 
     if (existingSubscription) {
-      await this.subscriptionRepository.update(existingSubscription._id!.toString(), subscriptionData);
+      await this._subscriptionRepository.update(existingSubscription._id!.toString(), subscriptionData);
     } else {
-      await this.subscriptionRepository.create(subscriptionData);
+      await this._subscriptionRepository.create(subscriptionData);
     }
 
     await this.updateUserPremiumStatus(userId!);
@@ -260,10 +259,10 @@ private async handleCheckoutSessionCompleted(session: Stripe.Checkout.Session): 
     const stripeSubscriptionId = subscription.id;
     const userId = subscription.metadata?.userId;
 
-    const existingSubscription = await this.subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId);
+    const existingSubscription = await this._subscriptionRepository.findByStripeSubscriptionId(stripeSubscriptionId);
 
     if (existingSubscription) {
-      await this.subscriptionRepository.update(existingSubscription._id!.toString(), {
+      await this._subscriptionRepository.update(existingSubscription._id!.toString(), {
         status: "canceled",
         currentPeriodEnd: new Date(),
       });
@@ -276,11 +275,11 @@ private async handleCheckoutSessionCompleted(session: Stripe.Checkout.Session): 
       throw new Error("Invalid user ID format");
     }
 
-    const subscription = await this.subscriptionRepository.findByUserId(userId);
+    const subscription = await this._subscriptionRepository.findByUserId(userId);
     const now = new Date();
     const isPremium = subscription && subscription.status === "active" && subscription.currentPeriodEnd > now;
 
-    await this.userRepository.update(userId, { isPremium });
+    await this._userRepository.update(userId, { isPremium });
   }
 
   async checkAndUpdateExpiredSubscription(userId: string): Promise<ISubscription | null> {
@@ -288,14 +287,14 @@ private async handleCheckoutSessionCompleted(session: Stripe.Checkout.Session): 
       throw new Error("Invalid user ID format");
     }
 
-    const subscription = await this.subscriptionRepository.findByUserId(userId);
+    const subscription = await this._subscriptionRepository.findByUserId(userId);
     if (!subscription) {
       return null;
     }
 
     const now = new Date();
     if (subscription.status === "active" && subscription.currentPeriodEnd <= now) {
-      await this.subscriptionRepository.update(subscription._id!.toString(), {
+      await this._subscriptionRepository.update(subscription._id!.toString(), {
         status: "canceled",
         currentPeriodEnd: now,
       });
@@ -306,12 +305,12 @@ private async handleCheckoutSessionCompleted(session: Stripe.Checkout.Session): 
   }
 
   async checkAndUpdateExpiredSubscriptions(): Promise<void> {
-    const subscriptions = await this.subscriptionRepository.findAll();
+    const subscriptions = await this._subscriptionRepository.findAll();
     const now = new Date();
 
     for (const subscription of subscriptions) {
       if (subscription.status === "active" && subscription.currentPeriodEnd <= now) {
-        await this.subscriptionRepository.update(subscription._id!.toString(), {
+        await this._subscriptionRepository.update(subscription._id!.toString(), {
           status: "canceled",
           currentPeriodEnd: now,
         });
@@ -324,6 +323,6 @@ private async handleCheckoutSessionCompleted(session: Stripe.Checkout.Session): 
     if (!Types.ObjectId.isValid(userId)) {
       throw new Error("Invalid user ID format");
     }
-    return await this.subscriptionRepository.findByUserId(userId);
+    return await this._subscriptionRepository.findByUserId(userId);
   }
 }

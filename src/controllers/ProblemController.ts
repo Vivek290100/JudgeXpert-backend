@@ -20,14 +20,14 @@ interface AdminAuthRequest extends AuthRequest {
 
 class ProblemController {
   constructor(
-    private problemService: IProblemService,
-    private subscriptionService: ISubscriptionService
+    private _problemService: IProblemService,
+    private _subscriptionService: ISubscriptionService
   ) {}
 
   private async canAccessPremium(user: { userId: string; role?: string } | undefined): Promise<boolean> {
     if (!user) return false;
     if (user.role === "admin") return true;
-    const subscription = await this.subscriptionService.findByUserId(user.userId);
+    const subscription = await this._subscriptionService.findByUserId(user.userId);
     return subscription?.status === "active" && subscription.currentPeriodEnd > new Date();
   }
 
@@ -38,7 +38,7 @@ class ProblemController {
         throw new BadRequestError(ErrorMessages.PROBLEM_DIR_REQUIRED);
       }
 
-      const problem = await this.problemService.createProblemFromFiles(problemDir);
+      const problem = await this._problemService.createProblemFromFiles(problemDir);
       if (!problem) {
         throw new NotFoundError(ErrorMessages.FAILED_TO_PROCESS_PROBLEM);
       }
@@ -63,7 +63,7 @@ class ProblemController {
         throw new BadRequestError(ErrorMessages.PROBLEM_ID_REQUIRED);
       }
 
-      const problem = await this.problemService.getProblemById(id);
+      const problem = await this._problemService.getProblemById(id);
       if (!problem) {
         throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
       }
@@ -97,7 +97,7 @@ class ProblemController {
         throw new BadRequestError(ErrorMessages.INVALID_SLUG);
       }
 
-      const problem = await this.problemService.getProblemBySlug(slug);
+      const problem = await this._problemService.getProblemBySlug(slug);
       if (!problem) {
         throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
       }
@@ -175,9 +175,9 @@ class ProblemController {
         }));
       }
 
-      const { problems, total } = await this.problemService.getProblemsPaginated(page, limit, query);
+      const { problems, total } = await this._problemService.getProblemsPaginated(page, limit, query);
 
-      const totalProblemsInDb = await this.problemService.countProblems(
+      const totalProblemsInDb = await this._problemService.countProblems(
         userRole === "admin" ? {} : { isBlocked: { $ne: true } }
       );
 
@@ -192,8 +192,8 @@ class ProblemController {
           } else {
             query._id = { $nin: solvedProblemIds };
           }
-          const filteredResult = await this.problemService.getProblemsPaginated(page, limit, query);
-          const totalFiltered = await this.problemService.countProblems(query);
+          const filteredResult = await this._problemService.getProblemsPaginated(page, limit, query);
+          const totalFiltered = await this._problemService.countProblems(query);
           sendResponse(res, {
             success: true,
             status: StatusCode.SUCCESS,
@@ -261,7 +261,7 @@ class ProblemController {
         throw new BadRequestError(ErrorMessages.INVALID_STATUS);
       }
 
-      const problem = await this.problemService.updateProblemStatus(id, status as "premium" | "free");
+      const problem = await this._problemService.updateProblemStatus(id, status as "premium" | "free");
       if (!problem) {
         throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
       }
@@ -289,7 +289,7 @@ class ProblemController {
         throw new BadRequestError(ErrorMessages.PROBLEM_DIR_REQUIRED);
       }
 
-      const problem = await this.problemService.processSpecificProblem(problemDir);
+      const problem = await this._problemService.processSpecificProblem(problemDir);
 
       if (!problem) {
         throw new NotFoundError(ErrorMessages.FAILED_TO_PROCESS_PROBLEM);
@@ -317,9 +317,9 @@ class ProblemController {
 
   async generateAllBoilerplate(req: Request, res: Response): Promise<void> {
     try {
-      const problems = await this.problemService.getProblemsPaginated(1, 1000);
+      const problems = await this._problemService.getProblemsPaginated(1, 1000);
       for (const problem of problems.problems) {
-        await this.problemService.processSpecificProblem(problem.slug);
+        await this._problemService.processSpecificProblem(problem.slug);
       }
 
       sendResponse(res, {
@@ -340,7 +340,7 @@ class ProblemController {
         throw new BadRequestError(ErrorMessages.PROBLEM_DIR_REQUIRED);
       }
 
-      await this.problemService.processSpecificProblem(problemDir);
+      await this._problemService.processSpecificProblem(problemDir);
 
       sendResponse(res, {
         success: true,
@@ -367,7 +367,7 @@ class ProblemController {
         throw new BadRequestError(ErrorMessages.INVALID_DIFFICULTY);
       }
 
-      const problem = await this.problemService.updateProblem(id, updates);
+      const problem = await this._problemService.updateProblem(id, updates);
       if (!problem) {
         throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
       }
@@ -417,7 +417,7 @@ class ProblemController {
         throw new BadRequestError(ErrorMessages.PROBLEM_ID_REQUIRED);
       }
 
-      const problem = await this.problemService.blockProblem(id);
+      const problem = await this._problemService.blockProblem(id);
       if (!problem) {
         throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
       }
@@ -440,7 +440,7 @@ class ProblemController {
         throw new BadRequestError(ErrorMessages.PROBLEM_ID_REQUIRED);
       }
 
-      const problem = await this.problemService.unblockProblem(id);
+      const problem = await this._problemService.unblockProblem(id);
       if (!problem) {
         throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
       }
@@ -464,7 +464,7 @@ class ProblemController {
         throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
       }
 
-      const problem = await this.problemService.getProblemById(problemId);
+      const problem = await this._problemService.getProblemById(problemId);
       if (!problem) {
         throw new NotFoundError(ErrorMessages.PROBLEM_NOT_FOUND);
       }
@@ -475,7 +475,7 @@ class ProblemController {
         }
       }
 
-      const { results, passed, executionTime } = await this.problemService.executeCode(
+      const { results, passed, executionTime } = await this._problemService.executeCode(
         problemId,
         language,
         code,
@@ -512,7 +512,7 @@ class ProblemController {
         slug = problemSlug;
       }
 
-      const submissions = await this.problemService.getUserSubmissions(user.userId, slug);
+      const submissions = await this._problemService.getUserSubmissions(user.userId, slug);
 
       sendResponse(res, {
         success: true,

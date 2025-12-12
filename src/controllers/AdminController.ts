@@ -6,14 +6,14 @@ import { SuccessMessages } from "../utils/messages";
 import { BadRequestError, ErrorMessages, NotFoundError } from "../utils/errors";
 
 class AdminController {
-  constructor(private adminService: IAdminService) {}
+  constructor(private _adminService: IAdminService) {}
 
   async getAllUsers(req: Request, res: Response): Promise<void> {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
       const search = (req.query.search as string) || "";
-      const { users, total } = await this.adminService.getAllUsers(page, limit, search);
+      const { users, total } = await this._adminService.getAllUsers(page, limit, search);
 
       const adminUsers = users.map((user) => ({
         id: user._id.toString(),
@@ -49,7 +49,7 @@ class AdminController {
         throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
       }
 
-      const user = await this.adminService.getUserById(userId);
+      const user = await this._adminService.getUserById(userId);
       if (!user) {
         throw new NotFoundError(ErrorMessages.USER_NOT_FOUND);
       }
@@ -82,7 +82,7 @@ class AdminController {
         throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
       }
 
-      const updatedUser = await this.adminService.blockUser(userId);
+      const updatedUser = await this._adminService.blockUser(userId);
       const adminUser = {
         id: updatedUser._id.toString(),
         email: updatedUser.email,
@@ -111,7 +111,7 @@ class AdminController {
         throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
       }
 
-      const updatedUser = await this.adminService.unblockUser(userId);
+      const updatedUser = await this._adminService.unblockUser(userId);
       const adminUser = {
         id: updatedUser._id.toString(),
         email: updatedUser.email,
@@ -141,8 +141,8 @@ class AdminController {
       }
 
       const updatedUser = isBlocked
-        ? await this.adminService.blockUser(userId)
-        : await this.adminService.unblockUser(userId);
+        ? await this._adminService.blockUser(userId)
+        : await this._adminService.unblockUser(userId);
 
       const adminUser = {
         id: updatedUser._id.toString(),
@@ -167,7 +167,7 @@ class AdminController {
 
   async getDashboardStats(req: Request, res: Response): Promise<void> {
     try {
-      const stats = await this.adminService.getDashboardStats();
+      const stats = await this._adminService.getDashboardStats();
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
@@ -185,7 +185,7 @@ class AdminController {
       if (!['weekly', 'monthly', 'yearly'].includes(period)) {
         throw new BadRequestError("Invalid period parameter");
       }
-      const revenueStats = await this.adminService.getRevenueStats(period);
+      const revenueStats = await this._adminService.getRevenueStats(period);
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,

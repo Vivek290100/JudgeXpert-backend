@@ -5,22 +5,22 @@ import { FilterQuery } from "mongoose";
 import User from "../models/UserModel";
 
 class NotificationService implements INotificationService {
-  private pendingNotifications: Map<string, any[]> = new Map();
-  private notifiedContests: Set<string> = new Set();
-  private notifiedProblems: Set<string> = new Set();
+  private _pendingNotifications: Map<string, any[]> = new Map();
+  private _notifiedContests: Set<string> = new Set();
+  private _notifiedProblems: Set<string> = new Set();
 
   constructor(
     private contestRepository: IContestRepository,
     private io: Server
   ) {
     setInterval(() => {
-      this.pendingNotifications.forEach((notifications, userId) => {
-        this.pendingNotifications.set(
+      this._pendingNotifications.forEach((notifications, userId) => {
+        this._pendingNotifications.set(
           userId,
           notifications.filter((n) => new Date(n.timestamp) > new Date(Date.now() - 3600000))
         );
-        if (this.pendingNotifications.get(userId)!.length === 0) {
-          this.pendingNotifications.delete(userId);
+        if (this._pendingNotifications.get(userId)!.length === 0) {
+          this._pendingNotifications.delete(userId);
         }
       });
     }, 300000);
@@ -34,7 +34,7 @@ class NotificationService implements INotificationService {
         return;
       }
 
-      if (this.notifiedContests.has(contestId)) {
+      if (this._notifiedContests.has(contestId)) {
         console.log(`Contest already notified: ${contestId}`);
         return;
       }
@@ -55,15 +55,15 @@ class NotificationService implements INotificationService {
           this.io.to(userId).emit("contestStarted", notification);
         } else {
           console.log(`User ${userId} offline, queuing contestStarted notification`);
-          const userNotifications = this.pendingNotifications.get(userId) || [];
+          const userNotifications = this._pendingNotifications.get(userId) || [];
           if (!userNotifications.some((n) => n.contestId === contestId)) {
             userNotifications.push(notification);
-            this.pendingNotifications.set(userId, userNotifications);
+            this._pendingNotifications.set(userId, userNotifications);
           }
         }
       }
 
-      this.notifiedContests.add(contestId);
+      this._notifiedContests.add(contestId);
     } catch (error) {
       console.error(`Error notifying contest start for ${contestId}:`, error);
     }
@@ -82,7 +82,7 @@ class NotificationService implements INotificationService {
       const { contests } = await this.contestRepository.findPaginated(1, 1000, query);
 
       for (const contest of contests) {
-        if (this.notifiedContests.has(contest._id.toString())) {
+        if (this._notifiedContests.has(contest._id.toString())) {
           console.log(`Skipping already notified contest: ${contest._id}`);
           continue;
         }
@@ -95,7 +95,7 @@ class NotificationService implements INotificationService {
   }
 
   async notifyNewProblem(slug: string): Promise<void> {
-    if (this.notifiedProblems.has(slug)) {
+    if (this._notifiedProblems.has(slug)) {
       return;
     }
 
@@ -120,20 +120,20 @@ class NotificationService implements INotificationService {
         this.io.to(socketId).emit("newProblem", notification);
       } else {
         console.log(`Admin ${userId} offline, queuing newProblem notification`);
-        const userNotifications = this.pendingNotifications.get(userId) || [];
+        const userNotifications = this._pendingNotifications.get(userId) || [];
         if (!userNotifications.some((n) => n.slug === slug)) {
           userNotifications.push(notification);
-          this.pendingNotifications.set(userId, userNotifications);
+          this._pendingNotifications.set(userId, userNotifications);
         }
       }
     });
 
-    this.notifiedProblems.add(slug);
+    this._notifiedProblems.add(slug);
   }
 
   async sendPendingNotifications(userId: string): Promise<void> {
     try {
-      const notifications = this.pendingNotifications.get(userId) || [];
+      const notifications = this._pendingNotifications.get(userId) || [];
       if (notifications.length === 0) {
         console.log(`No pending notifications for user ${userId}`);
         return;
@@ -145,7 +145,7 @@ class NotificationService implements INotificationService {
         notifications.forEach((notification) => {
           this.io.to(userId).emit(notification.type, notification);
         });
-        this.pendingNotifications.delete(userId);
+        this._pendingNotifications.delete(userId);
       }
     } catch (error) {
       console.error(`Error sending pending notifications for user ${userId}:`, error);
@@ -153,7 +153,7 @@ class NotificationService implements INotificationService {
   }
 
   clearNotifiedContest(contestId: string): void {
-    this.notifiedContests.delete(contestId);
+    this._notifiedContests.delete(contestId);
     console.log(`Cleared notified contest: ${contestId}`);
   }
 }

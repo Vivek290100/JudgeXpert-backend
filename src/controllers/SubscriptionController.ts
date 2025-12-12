@@ -12,10 +12,10 @@ const stripe = new Stripe(CONFIG.STRIPE_SECRET_KEY, {
 });
 
 export default class SubscriptionController {
-  private subscriptionService: ISubscriptionService;
+  private _subscriptionService: ISubscriptionService;
 
   constructor(subscriptionService: ISubscriptionService) {
-    this.subscriptionService = subscriptionService;
+    this._subscriptionService = subscriptionService;
   }
 
   async createCheckoutSession(req: AuthRequest, res: Response): Promise<void> {
@@ -41,7 +41,7 @@ export default class SubscriptionController {
     }
 
     try {
-      const { checkoutUrl } = await this.subscriptionService.createCheckoutSession(userId, planId);
+      const { checkoutUrl } = await this._subscriptionService.createCheckoutSession(userId, planId);
       console.log("checkoutUrl",checkoutUrl);
       
       sendResponse(res, {
@@ -69,7 +69,7 @@ export default class SubscriptionController {
       if (!Buffer.isBuffer(payload)) {
         throw new Error("Webhook payload is not a Buffer");
       }
-      await this.subscriptionService.handleWebhookEvent(payload, signature);
+      await this._subscriptionService.handleWebhookEvent(payload, signature);
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
@@ -98,7 +98,7 @@ export default class SubscriptionController {
     }
 
     try {
-      const subscription = await this.subscriptionService.findByUserId(userId);
+      const subscription = await this._subscriptionService.findByUserId(userId);
       console.log("subscription111",subscription);
       
 
@@ -236,7 +236,7 @@ export default class SubscriptionController {
         return;
       }
 
-      const subscription = await this.subscriptionService.findByUserId(userId);
+      const subscription = await this._subscriptionService.findByUserId(userId);
       console.log("subscription0",subscription);
       
       if (!subscription || subscription.status !== "active") {

@@ -5,7 +5,7 @@ import { BadRequestError, ErrorMessages } from "../utils/errors";
 import { FilterQuery } from "mongoose";
 
 class ContestService implements IContestService {
-  constructor(private contestRepository: IContestRepository) {}
+  constructor(private _contestRepository: IContestRepository) {}
 
   async createContest(data: any): Promise<any> {
     console.log("service", data);
@@ -21,7 +21,7 @@ class ContestService implements IContestService {
       throw new BadRequestError("Start time must be before end time");
     }
 
-    return this.contestRepository.create({
+    return this._contestRepository.create({
       ...data,
       startTime,
       endTime,
@@ -42,17 +42,17 @@ class ContestService implements IContestService {
     endedContests: number;
   }> {
     const userQuery = { ...query, isBlocked: false };
-    const { contests, total } = await this.contestRepository.findPaginated(page, limit, userQuery);
+    const { contests, total } = await this._contestRepository.findPaginated(page, limit, userQuery);
     const now = new Date();
 
     const [activeCount, upcomingCount, endedCount] = await Promise.all([
-      this.contestRepository.countDocuments({
+      this._contestRepository.countDocuments({
         ...userQuery,
         startTime: { $lte: now },
         endTime: { $gte: now },
       }),
-      this.contestRepository.countDocuments({ ...userQuery, startTime: { $gt: now } }),
-      this.contestRepository.countDocuments({ ...userQuery, endTime: { $lt: now } }),
+      this._contestRepository.countDocuments({ ...userQuery, startTime: { $gt: now } }),
+      this._contestRepository.countDocuments({ ...userQuery, endTime: { $lt: now } }),
     ]);
 
     const formattedContests = contests.map((contest) => ({
@@ -75,7 +75,7 @@ class ContestService implements IContestService {
   }
 
   async getContestById(contestId: string): Promise<any> {
-    const contest = await this.contestRepository.findById(contestId);
+    const contest = await this._contestRepository.findById(contestId);
     if (!contest || contest.isBlocked) {
       throw new BadRequestError(ErrorMessages.CONTEST_NOT_FOUND);
     }
@@ -93,7 +93,7 @@ class ContestService implements IContestService {
   }
 
   async registerForContest(id: string, userId: string): Promise<{ message: string }> {
-    const contest = await this.contestRepository.findById(id);
+    const contest = await this._contestRepository.findById(id);
     if (!contest || contest.isBlocked) throw new BadRequestError(ErrorMessages.CONTEST_NOT_FOUND);
     if (contest.participants.some((p: any) => p._id.toString() === userId)) {
       throw new BadRequestError(ErrorMessages.USER_ALREADY_REGISTERED);
@@ -101,12 +101,12 @@ class ContestService implements IContestService {
     if (new Date(contest.startTime) < new Date()) {
       throw new BadRequestError(ErrorMessages.CONTEST_ALREADY_STARTED);
     }
-    await this.contestRepository.addParticipant(id, userId);
+    await this._contestRepository.addParticipant(id, userId);
     return { message: "Registered successfully" };
   }
 
   async updateContestStatus(contestId: string, isBlocked: boolean): Promise<any> {
-    const contest = await this.contestRepository.findByIdAndUpdate(
+    const contest = await this._contestRepository.findByIdAndUpdate(
       contestId,
       { isBlocked },
       { new: true }
@@ -122,7 +122,7 @@ class ContestService implements IContestService {
   }
 
   async getRegisteredContests(userId: string): Promise<string[]> {
-    const contests = await this.contestRepository.findPaginated(1, 1000, {
+    const contests = await this._contestRepository.findPaginated(1, 1000, {
       participants: userId,
       isBlocked: false,
     });
@@ -130,7 +130,7 @@ class ContestService implements IContestService {
   }
 
   async getProblemResultsForContest(contestId: string, problemId: string): Promise<any[]> {
-    const contest = await this.contestRepository.findById(contestId);
+    const contest = await this._contestRepository.findById(contestId);
     if (!contest) {
       throw new BadRequestError(ErrorMessages.CONTEST_NOT_FOUND);
     }
@@ -140,7 +140,7 @@ class ContestService implements IContestService {
       throw new BadRequestError("Problem not found in this contest");
     }
 
-    const submissions = await this.contestRepository.findLatestSubmissions(
+    const submissions = await this._contestRepository.findLatestSubmissions(
       problemId,
       contestId,
       contest.participants.map((p: any) => p._id.toString())
@@ -160,7 +160,7 @@ class ContestService implements IContestService {
     const latestSubmissions: any = {};
 
     for (const problem of problems) {
-      const submissions = await this.contestRepository.findLatestSubmissions(
+      const submissions = await this._contestRepository.findLatestSubmissions(
         problem._id.toString(),
         contestId
       );

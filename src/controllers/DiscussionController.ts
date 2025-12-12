@@ -7,7 +7,7 @@ import { SuccessMessages } from "../utils/messages";
 import { BadRequestError, ErrorMessages } from "../utils/errors";
 
 class DiscussionController {
-  constructor(private discussionService: IDiscussionService) {}
+  constructor(private _discussionService: IDiscussionService) {}
 
   async createDiscussion(req: AuthRequest, res: Response): Promise<void> {
     try {
@@ -17,7 +17,7 @@ class DiscussionController {
       const { problemId, message } = req.body;
       if (!problemId || !message) throw new BadRequestError(ErrorMessages.ALL_FIELDS_REQUIRED);
 
-      const discussion = await this.discussionService.createDiscussion(problemId, userId, message);
+      const discussion = await this._discussionService.createDiscussion(problemId, userId, message);
 
       sendResponse(res, {
         success: true,
@@ -38,7 +38,7 @@ class DiscussionController {
       const { discussionId, message } = req.body;
       if (!discussionId || !message) throw new BadRequestError(ErrorMessages.ALL_FIELDS_REQUIRED);
 
-      const newReply = await this.discussionService.addReply(discussionId, userId, message);
+      const newReply = await this._discussionService.addReply(discussionId, userId, message);
 
       sendResponse(res, {
         success: true,
@@ -57,7 +57,7 @@ class DiscussionController {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
 
-      const { discussions, total } = await this.discussionService.getDiscussionsByProblemId(problemId, page, limit);
+      const { discussions, total } = await this._discussionService.getDiscussionsByProblemId(problemId, page, limit);
 
       sendResponse(res, {
         success: true,
@@ -76,7 +76,7 @@ class DiscussionController {
       if (!userId) throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
 
       const { discussionId } = req.params;
-      const discussion = await this.discussionService.upvoteDiscussion(discussionId, userId);
+      const discussion = await this._discussionService.upvoteDiscussion(discussionId, userId);
 
       sendResponse(res, {
         success: true,
@@ -95,7 +95,7 @@ class DiscussionController {
       if (!userId) throw new BadRequestError(ErrorMessages.USER_ID_REQUIRED);
 
       const { discussionId, replyIndex } = req.params;
-      const discussion = await this.discussionService.upvoteReply(discussionId, parseInt(replyIndex), userId);
+      const discussion = await this._discussionService.upvoteReply(discussionId, parseInt(replyIndex), userId);
 
       sendResponse(res, {
         success: true,

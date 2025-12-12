@@ -4,19 +4,19 @@ import { IProblemRepository } from "../interfaces/repositoryInterfaces/IProblemR
 
 export class ProblemFolderService {
   constructor(
-    private problemRepository: IProblemRepository,
-      private problemsBasePath: string = path.join(__dirname, ".././problems")
+    private _problemRepository: IProblemRepository,
+      private _problemsBasePath: string = path.join(__dirname, ".././problems")
   ) { }
 
   async checkForNewProblemFolders(): Promise<string[]> {
     try {
-      const folders = await fs.readdir(this.problemsBasePath, { withFileTypes: true });
+      const folders = await fs.readdir(this._problemsBasePath, { withFileTypes: true });
       const problemFolders = folders
         .filter((dirent) => dirent.isDirectory())
         .map((dirent) => dirent.name);
 
 
-      const existingProblems = await this.problemRepository.find({});
+      const existingProblems = await this._problemRepository.find({});
       const existingSlugs = new Set(existingProblems.map((problem) => problem.slug));
 
       const newFolders = problemFolders.filter((folder) => !existingSlugs.has(folder));

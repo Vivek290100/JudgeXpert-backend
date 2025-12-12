@@ -11,13 +11,13 @@ interface AuthRequest extends Request {
 }
 
 class ContestController {
-  constructor(private contestService: IContestService) {}
+  constructor(private _contestService: IContestService) {}
 
   async getContests(req: Request, res: Response): Promise<void> {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
-      const result = await this.contestService.getContests(page, limit);
+      const result = await this._contestService.getContests(page, limit);
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
@@ -32,7 +32,7 @@ class ContestController {
   async getContestById(req: Request, res: Response): Promise<void> {
     try {
       const { contestId } = req.params;
-      const contest = await this.contestService.getContestById(contestId);
+      const contest = await this._contestService.getContestById(contestId);
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
@@ -49,7 +49,7 @@ class ContestController {
       const { contestId } = req.params;
       const userId = req.user?.userId;
       if (!userId) throw new BadRequestError(ErrorMessages.UNAUTHORIZED_ACCESS);
-      const result = await this.contestService.registerForContest(contestId, userId);
+      const result = await this._contestService.registerForContest(contestId, userId);
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
@@ -69,7 +69,7 @@ class ContestController {
       const { contestId } = req.params;
       const { isBlocked } = req.body;
       if (typeof isBlocked !== "boolean") throw new BadRequestError("isBlocked must be a boolean");
-      const updatedContest = await this.contestService.updateContestStatus(contestId, isBlocked);
+      const updatedContest = await this._contestService.updateContestStatus(contestId, isBlocked);
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
@@ -86,7 +86,7 @@ class ContestController {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 10;
       const search = (req.query.search as string) || "";
-      const result = await this.contestService.getContests(page, limit, {
+      const result = await this._contestService.getContests(page, limit, {
         title: { $regex: search, $options: "i" },
       });
       sendResponse(res, {
@@ -121,7 +121,7 @@ class ContestController {
         endTime: parsedEndTime,
         problems,
       };
-      const newContest = await this.contestService.createContest(contestData);
+      const newContest = await this._contestService.createContest(contestData);
       sendResponse(res, {
         success: true,
         status: StatusCode.CREATED,
@@ -137,7 +137,7 @@ class ContestController {
     try {
       const userId = req.user?.userId;
       if (!userId) throw new BadRequestError(ErrorMessages.UNAUTHORIZED_ACCESS);
-      const contestIds = await this.contestService.getRegisteredContests(userId);
+      const contestIds = await this._contestService.getRegisteredContests(userId);
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
@@ -153,14 +153,14 @@ class ContestController {
     try {
       const { contestId, problemId } = req.params;
       
-      const contest = await this.contestService.getContestById(contestId);
+      const contest = await this._contestService.getContestById(contestId);
       const now = new Date();
       
       if (new Date(contest.endTime) > now) {
         throw new BadRequestError("Contest results are not available until the contest has ended");
       }
       
-      const topParticipants = await this.contestService.getProblemResultsForContest(
+      const topParticipants = await this._contestService.getProblemResultsForContest(
         contestId, 
         problemId
       );
