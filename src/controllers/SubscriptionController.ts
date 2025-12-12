@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { Types } from "mongoose";
 import { ISubscriptionService } from "../interfaces/serviceInterfaces/ISubscriptionService";
-import { sendResponse } from "../utils/responseUtils";
+import { handleError, sendResponse } from "../utils/responseUtils";
 import { AuthRequest } from "../middlewares/authMiddleware";
 import { StatusCode } from "../utils/statusCode";
 import { CONFIG } from "../config/config";
@@ -42,27 +42,28 @@ export default class SubscriptionController {
 
     try {
       const { checkoutUrl } = await this._subscriptionService.createCheckoutSession(userId, planId);
-      console.log("checkoutUrl",checkoutUrl);
-      
+      console.log("checkoutUrl", checkoutUrl);
+
       sendResponse(res, {
         success: true,
         status: StatusCode.SUCCESS,
         message: "Checkout session created",
         data: { checkoutUrl },
       });
-    } catch (error: any) {
-      sendResponse(res, {
-        success: false,
-        status: StatusCode.INTERNAL_SERVER_ERROR,
-        message: error.message || "Failed to create checkout session",
-      });
+    } catch (error) {
+      handleError(res, error);
+      // sendResponse(res, {
+      //   success: false,
+      //   status: StatusCode.INTERNAL_SERVER_ERROR,
+      //   message: error.message || "Failed to create checkout session",
+      // });
     }
   }
 
   async handleWebhook(req: Request, res: Response): Promise<void> {
     const signature = req.headers["stripe-signature"] as string;
-    console.log("signature",signature);
-    
+    console.log("signature", signature);
+
     const payload = req.body;
 
     try {
@@ -75,13 +76,8 @@ export default class SubscriptionController {
         status: StatusCode.SUCCESS,
         message: "Webhook processed successfully",
       });
-    } catch (error: any) {
-      console.error("Webhook error:", error);
-      sendResponse(res, {
-        success: false,
-        status: StatusCode.BAD_REQUEST,
-        message: error.message || "Webhook processing failed",
-      });
+    } catch (error) {
+      handleError(res, error);
     }
   }
 
@@ -99,8 +95,8 @@ export default class SubscriptionController {
 
     try {
       const subscription = await this._subscriptionService.findByUserId(userId);
-      console.log("subscription111",subscription);
-      
+      console.log("subscription111", subscription);
+
 
       if (!subscription) {
         sendResponse(res, {
@@ -123,19 +119,15 @@ export default class SubscriptionController {
           currentPeriodEnd: subscription.currentPeriodEnd,
         },
       });
-    } catch (error: any) {
-      sendResponse(res, {
-        success: false,
-        status: StatusCode.INTERNAL_SERVER_ERROR,
-        message: error.message || "Failed to retrieve subscription",
-      });
+    } catch (error) {
+      handleError(res, error);
     }
   }
 
   async getCheckoutSession(req: AuthRequest, res: Response): Promise<void> {
     const sessionId = req.query.session_id as string;
-    console.log("sessionId",sessionId);
-    
+    console.log("sessionId", sessionId);
+
     const userId = req.user?.userId;
 
     if (!sessionId || !userId || !Types.ObjectId.isValid(userId)) {
@@ -149,7 +141,7 @@ export default class SubscriptionController {
 
     try {
       const session = await stripe.checkout.sessions.retrieve(sessionId);
-          console.log("session",session);
+      console.log("session", session);
 
 
       const sessionUserId = session.metadata?.userId;
@@ -190,19 +182,15 @@ export default class SubscriptionController {
           subscriptionId: session.subscription,
         },
       });
-    } catch (error: any) {
-      sendResponse(res, {
-        success: false,
-        status: StatusCode.INTERNAL_SERVER_ERROR,
-        message: error.message || "Failed to retrieve checkout session",
-      });
+    } catch (error) {
+      handleError(res, error);
     }
   }
 
   async handleSuccess(req: AuthRequest, res: Response): Promise<void> {
     const sessionId = req.query.session_id as string;
-    console.log("sessionIdsessionId",sessionId);
-    
+    console.log("sessionIdsessionId", sessionId);
+
     const userId = req.user?.userId;
 
     if (!sessionId || !userId || !Types.ObjectId.isValid(userId)) {
@@ -216,8 +204,8 @@ export default class SubscriptionController {
 
     try {
       const session = await stripe.checkout.sessions.retrieve(sessionId);
-      console.log("sessionsession",session);
-      
+      console.log("sessionsession", session);
+
       if (session.metadata?.userId !== userId) {
         sendResponse(res, {
           success: false,
@@ -237,8 +225,8 @@ export default class SubscriptionController {
       }
 
       const subscription = await this._subscriptionService.findByUserId(userId);
-      console.log("subscription0",subscription);
-      
+      console.log("subscription0", subscription);
+
       if (!subscription || subscription.status !== "active") {
         sendResponse(res, {
           success: false,
@@ -249,12 +237,8 @@ export default class SubscriptionController {
       }
 
       res.redirect(`${CONFIG.FRONTEND_URL}/user/subscription/success?session_id=${sessionId}`);
-    } catch (error: any) {
-      sendResponse(res, {
-        success: false,
-        status: StatusCode.INTERNAL_SERVER_ERROR,
-        message: error.message || "Failed to verify subscription",
-      });
+    } catch (error) {
+      handleError(res, error);
     }
   }
 }

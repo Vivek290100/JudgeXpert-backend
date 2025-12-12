@@ -21,22 +21,49 @@ export const sendResponse = (
 };
 
 
-export const handleError = (res: Response, error: AppError | Error) => {
+// export const handleError = (res: Response, error: AppError | Error) => {
+//   if (error instanceof AppError) {
+//     sendResponse(res, {
+//       success: false,
+//       message: error.message,
+//       status: error.statusCode,
+//       data: error.details,
+//     });
+//   } else {
+//     sendResponse(res, {
+//       success: false,
+//       message: "Internal Server Error",
+//       status: StatusCode.INTERNAL_SERVER_ERROR,
+//       data: null,
+//     });
+//   }
+// };
+
+export const handleError = (res: Response, error: unknown) => {
   if (error instanceof AppError) {
-    sendResponse(res, {
+    return sendResponse(res, {
       success: false,
       message: error.message,
       status: error.statusCode,
-      data: error.details,
+      data: error.details ?? null,
     });
-  } else {
-    sendResponse(res, {
+  }
+
+  if (error instanceof Error) {
+    return sendResponse(res, {
       success: false,
-      message: "Internal Server Error",
+      message: error.message || "An unexpected error occurred",
       status: StatusCode.INTERNAL_SERVER_ERROR,
       data: null,
     });
   }
+
+  return sendResponse(res, {
+    success: false,
+    message: "An unexpected error occurred",
+    status: StatusCode.INTERNAL_SERVER_ERROR,
+    data: null,
+  });
 };
 
 

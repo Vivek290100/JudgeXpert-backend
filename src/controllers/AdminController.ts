@@ -37,7 +37,7 @@ class AdminController {
           currentPage: page,
         },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -70,7 +70,7 @@ class AdminController {
         message: SuccessMessages.USER_FETCHED,
         data: { user: adminUser },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -99,7 +99,7 @@ class AdminController {
         message: SuccessMessages.USER_BLOCKED,
         data: { user: adminUser },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -128,7 +128,7 @@ class AdminController {
         message: SuccessMessages.USER_UNBLOCKED,
         data: { user: adminUser },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -160,7 +160,7 @@ class AdminController {
         message: isBlocked ? SuccessMessages.USER_BLOCKED : SuccessMessages.USER_UNBLOCKED,
         data: { user: adminUser },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -174,7 +174,7 @@ class AdminController {
         message: SuccessMessages.DASHBOARD_STATS_FETCHED,
         data: stats,
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -192,7 +192,7 @@ class AdminController {
         message: SuccessMessages.REVENUE_STATS_FETCHED,
         data: revenueStats,
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }

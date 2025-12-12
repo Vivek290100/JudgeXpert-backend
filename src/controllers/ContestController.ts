@@ -24,7 +24,7 @@ class ContestController {
         message: SuccessMessages.CONTESTS_FETCHED,
         data: result,
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -39,7 +39,7 @@ class ContestController {
         message: SuccessMessages.CONTESTS_FETCHED,
         data: { contest },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -59,7 +59,7 @@ class ContestController {
           user: { _id: userId, userName: req.user?.userName || "Unknown" },
         },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -76,7 +76,7 @@ class ContestController {
         message: "Contest status updated successfully",
         data: updatedContest,
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -95,7 +95,7 @@ class ContestController {
         message: SuccessMessages.CONTESTS_FETCHED,
         data: result,
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -128,7 +128,7 @@ class ContestController {
         message: "Contest created successfully",
         data: newContest,
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -144,7 +144,7 @@ class ContestController {
         message: "Registered contests fetched successfully",
         data: { contestIds },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -171,7 +171,7 @@ class ContestController {
         message: "Problem results fetched successfully",
         data: { topParticipants },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }

@@ -28,7 +28,7 @@ class UserController {
         message: result.message || SuccessMessages.SIGNUP_INITIATED,
         data: result.email ? { email: result.email } : {},
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -48,7 +48,7 @@ class UserController {
         message: SuccessMessages.OTP_VERIFIED_USER_CREATED,
         data: { user: filteredUser, accessToken },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -63,7 +63,7 @@ class UserController {
         message: result.message || SuccessMessages.OTP_RESENT,
         data: result.email ? { email: result.email } : {},
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -83,7 +83,7 @@ class UserController {
         message: SuccessMessages.LOGIN_SUCCESS,
         data: { user: filteredUser, accessToken, userId: user._id.toString() },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -107,7 +107,7 @@ class UserController {
         message: SuccessMessages.GOOGLE_LOGIN_SUCCESS,
         data: { user: filteredUser, accessToken },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -126,7 +126,7 @@ class UserController {
         message: SuccessMessages.LOGOUT_SUCCESS,
         data: null,
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -141,7 +141,7 @@ class UserController {
         message: result.message || SuccessMessages.PASSWORD_RESET_INITIATED,
         data: result.email ? { email: result.email } : {},
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -157,7 +157,7 @@ class UserController {
         message: SuccessMessages.OTP_VERIFIED,
         data: { email },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -177,7 +177,7 @@ class UserController {
         message: SuccessMessages.PASSWORD_RESET_SUCCESS,
         data: null,
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -204,7 +204,7 @@ class UserController {
         message: SuccessMessages.PROFILE_UPDATED,
         data: { user: filterUserResponse(updatedUser) },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -226,7 +226,7 @@ class UserController {
         message: SuccessMessages.TOKEN_REFRESHED,
         data: { accessToken: newAccessToken },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -254,7 +254,7 @@ class UserController {
           currentPage: result.currentPage,
         },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }

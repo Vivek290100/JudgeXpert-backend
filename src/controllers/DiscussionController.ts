@@ -25,7 +25,7 @@ class DiscussionController {
         message: SuccessMessages.DISCUSSION_CREATED,
         data: discussion,
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -46,7 +46,7 @@ class DiscussionController {
         message: "Reply added successfully",
         data: newReply.replies[newReply.replies.length - 1],
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -65,7 +65,7 @@ class DiscussionController {
         message: SuccessMessages.DISCUSSIONS_FETCHED,
         data: { discussions, total, totalPages: Math.ceil(total / limit), currentPage: page },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -84,7 +84,7 @@ class DiscussionController {
         message: "Discussion upvoted successfully",
         data: discussion,
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -103,7 +103,7 @@ class DiscussionController {
         message: "Reply upvoted successfully",
         data: discussion,
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }

@@ -49,7 +49,7 @@ class ProblemController {
         message: SuccessMessages.PROBLEM_CREATED,
         data: { problem: filterProblemResponse(problem) },
       });
-    } catch (error: any) {
+    } catch (error) {
       console.log("Error in createProblem:", error);
       handleError(res, error);
     }
@@ -85,7 +85,7 @@ class ProblemController {
         message: SuccessMessages.PROBLEM_FETCHED,
         data: { problem: filterProblemResponse(populatedProblem || problem) },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -125,7 +125,7 @@ class ProblemController {
           },
         },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -244,7 +244,7 @@ class ProblemController {
           currentPage: page,
         },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -276,7 +276,7 @@ class ProblemController {
         message: SuccessMessages.PROBLEM_STATUS_UPDATED,
         data: { problem: filterProblemResponse(populatedProblem || problem) },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -310,7 +310,7 @@ class ProblemController {
         message: SuccessMessages.PROBLEM_PROCESSED,
         data: { problem: filterProblemResponse(problem) },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -328,7 +328,7 @@ class ProblemController {
         message: SuccessMessages.BOILERPLATE_ALL_GENERATED,
         data: null,
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -348,7 +348,7 @@ class ProblemController {
         message: SuccessMessages.BOILERPLATE_SPECIFIC_GENERATED,
         data: null,
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -382,7 +382,7 @@ class ProblemController {
         message: SuccessMessages.PROBLEM_UPDATED,
         data: { problem: filterProblemResponse(populatedProblem || problem) },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -405,7 +405,7 @@ class ProblemController {
         message: SuccessMessages.PROBLEM_UNLINKED(problemDir),
         data: null,
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -428,7 +428,7 @@ class ProblemController {
         message: SuccessMessages.PROBLEM_BLOCKED,
         data: { problem: filterProblemResponse(problem) },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -451,7 +451,7 @@ class ProblemController {
         message: SuccessMessages.PROBLEM_UNBLOCKED,
         data: { problem: filterProblemResponse(problem) },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -490,7 +490,7 @@ class ProblemController {
         message: passed ? SuccessMessages.CODE_EXECUTION_PASSED : SuccessMessages.CODE_EXECUTION_FAILED,
         data: { results, executionTime },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
@@ -533,7 +533,7 @@ class ProblemController {
           })),
         },
       });
-    } catch (error: any) {
+    } catch (error) {
       handleError(res, error);
     }
   }
