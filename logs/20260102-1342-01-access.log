@@ -1,5 +1,0 @@
-::1 - - [-] "GET /problems?page=1&limit=10 HTTP/1.1" 304 - "http://localhost:4000/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36" - 171.725 ms
-[-] GET /registered-contests → 304 61.922 ms
-[-] GET /contests?page=1&limit=9 → 304 111.000 ms
-[-] GET /registered-contests → 304 38.796 ms
-[-] GET /contests/68232a93e36ef104aa173c47 → 304 90.539 ms
