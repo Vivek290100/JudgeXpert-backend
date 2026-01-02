@@ -9,6 +9,7 @@ import userRouter from "./routes/UserRoutes";
 import { responseLogger } from "./middlewares/logger";
 import {CONFIG} from "./config/config"
 import adminRouter from "./routes/AdminRoutes";
+import { morganLogger } from "./middlewares/morganLogger";
 
 dotenv.config();
 connectDB();
@@ -18,6 +19,8 @@ app.set("trust proxy", 1);
 
 app.use(helmet());
 app.use(mongoSanitize());
+
+app.use(morganLogger);
 
 app.use(
   cors({
